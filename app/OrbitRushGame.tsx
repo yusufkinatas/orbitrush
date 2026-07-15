@@ -136,6 +136,7 @@ type Planet = {
   fractured: boolean;
   hue: number;
   risk: boolean;
+  comboAvailable: boolean;
   crystals: Crystal[];
 };
 
@@ -232,7 +233,7 @@ type GameRuntime = {
   holdInputActive: boolean;
   latchHoldTime: number;
   latchAttemptCount: number;
-  latchFeedback: "perfect" | "safe" | null;
+  latchFeedback: "perfect" | "safe" | "spent" | null;
   latchFeedbackTimer: number;
   lives: number;
   lastLatchedPlanetId: number | null;
@@ -700,6 +701,7 @@ function createPlanet(
     fractured: false,
     hue: planetHue(kind, risk),
     risk,
+    comboAvailable: true,
     crystals,
   };
 }
@@ -1232,11 +1234,11 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
     context.setLineDash([]);
     context.textAlign = "center";
     context.textBaseline = "middle";
-    context.font = "700 6px monospace";
+    context.font = "700 10px monospace";
     context.letterSpacing = "1.4px";
-    context.fillStyle = "rgba(255,130,172,0.5)";
+    context.fillStyle = "rgba(255,130,172,0.78)";
     context.fillText("ASTEROİT KUŞAĞI", belt.safeX, sy - 11);
-    context.fillStyle = "rgba(86,243,255,0.58)";
+    context.fillStyle = "rgba(86,243,255,0.8)";
     context.fillText("▽ GÜVENLİ KORİDOR", belt.safeX, sy + 10);
     context.restore();
   }
@@ -1352,6 +1354,31 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
     context.arc(planet.x, sy, planet.radius * 0.72, Math.PI * 1.08, Math.PI * 1.75);
     context.stroke();
 
+    if (planet.comboAvailable) {
+      const chargeRadius = Math.max(7, planet.radius * 0.43);
+      const chargePulse = 0.72 + Math.sin(runtime.elapsed * 4.2 + planet.id) * 0.18;
+      context.save();
+      context.globalAlpha = chargePulse;
+      context.strokeStyle = "#8ff8ff";
+      context.fillStyle = "#dfffff";
+      context.lineWidth = 1.25;
+      context.shadowColor = "#56f3ff";
+      context.shadowBlur = 10;
+      context.setLineDash([chargeRadius * 0.72, chargeRadius * 0.48]);
+      context.beginPath();
+      context.arc(planet.x, sy, chargeRadius, runtime.elapsed * 0.7, runtime.elapsed * 0.7 + TAU);
+      context.stroke();
+      context.setLineDash([]);
+      drawDiamond(
+        context,
+        planet.x,
+        sy,
+        Math.max(2.2, planet.radius * 0.1),
+        runtime.elapsed * 1.4,
+      );
+      context.restore();
+    }
+
     if (planet.kind === "fragile") {
       const integrity = clamp(planet.fragileRemaining / (TAU * 0.75), 0, 1);
       context.globalAlpha = 0.4 + (1 - integrity) * 0.55;
@@ -1383,7 +1410,7 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
       context.save();
       context.textAlign = "center";
       context.textBaseline = "middle";
-      context.font = `800 ${planet.kind === "fragile" ? 13 : 11}px monospace`;
+      context.font = `800 ${planet.kind === "fragile" ? 15 : 14}px monospace`;
       context.fillStyle = `hsla(${hue}, 100%, 82%, 0.84)`;
       context.shadowColor = `hsl(${hue} 100% 60%)`;
       context.shadowBlur = 8;
@@ -1533,17 +1560,17 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
   if (runtime.phase !== "ready") {
     context.save();
     context.textBaseline = "top";
-    context.font = "600 8px monospace";
+    context.font = "600 10px monospace";
     context.letterSpacing = "1.5px";
-    context.fillStyle = "rgba(224,238,255,0.42)";
+    context.fillStyle = "rgba(224,238,255,0.72)";
     context.fillText("EN İYİ", 15, 17);
-    context.font = "700 13px monospace";
+    context.font = "700 15px monospace";
     context.fillStyle = "rgba(241,248,255,0.82)";
     context.fillText(String(runtime.best).padStart(6, "0"), 15, 29);
 
     context.textAlign = "center";
-    context.font = "600 8px monospace";
-    context.fillStyle = "rgba(224,238,255,0.42)";
+    context.font = "600 10px monospace";
+    context.fillStyle = "rgba(224,238,255,0.72)";
     context.fillText("SKOR", WIDTH / 2, 17);
     context.font = "800 18px monospace";
     context.fillStyle = "#ffffff";
@@ -1553,10 +1580,10 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
 
     context.textAlign = "right";
     context.shadowBlur = 0;
-    context.font = "800 11px monospace";
+    context.font = "800 14px monospace";
     context.fillStyle = "#ff8cdb";
     context.fillText(`♥ ${runtime.lives}`, WIDTH - 15, 18);
-    context.font = "700 11px monospace";
+    context.font = "700 14px monospace";
     context.fillStyle = "#ffd66b";
     context.fillText(`◆ ${runtime.walletCrystals}`, WIDTH - 15, 34);
     context.restore();
@@ -1571,9 +1598,9 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
     context.save();
     context.textAlign = "center";
     context.textBaseline = "top";
-    context.font = "700 7px monospace";
+    context.font = "700 10px monospace";
     context.letterSpacing = "0.9px";
-    context.fillStyle = "rgba(143,248,255,0.62)";
+    context.fillStyle = "rgba(143,248,255,0.8)";
     context.fillText(
       `HIZ ${runtime.player.speed.toFixed(1)} · ${motionState}${latchState}`,
       WIDTH / 2,
@@ -1584,7 +1611,8 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
 
   if (runtime.phase === "playing" && runtime.latchFeedbackTimer > 0 && runtime.latchFeedback) {
     const perfect = runtime.latchFeedback === "perfect";
-    const duration = perfect ? 0.85 : 0.7;
+    const spent = runtime.latchFeedback === "spent";
+    const duration = perfect ? 0.85 : spent ? 0.58 : 0.7;
     const progress = 1 - clamp(runtime.latchFeedbackTimer / duration, 0, 1);
     const alpha = clamp(runtime.latchFeedbackTimer / 0.2, 0, 1);
     const scale = 0.88 + Math.sin(Math.min(progress * Math.PI, Math.PI)) * 0.16;
@@ -1594,17 +1622,21 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
     context.globalAlpha = alpha;
     context.textAlign = "center";
     context.textBaseline = "middle";
-    context.font = `850 ${perfect ? 18 : 15}px Arial`;
+    context.font = `850 ${perfect ? 18 : spent ? 14 : 15}px Arial`;
     context.letterSpacing = perfect ? "1.4px" : "1px";
-    context.fillStyle = perfect ? "#ffd66b" : "#8ff8ff";
-    context.shadowColor = perfect ? "#ff4fc8" : "#56f3ff";
+    context.fillStyle = perfect ? "#ffd66b" : spent ? "#b9bdd8" : "#8ff8ff";
+    context.shadowColor = perfect ? "#ff4fc8" : spent ? "#73799b" : "#56f3ff";
     context.shadowBlur = perfect ? 20 : 10;
-    context.fillText(perfect ? "PERFECT LATCH" : "SAFE LATCH", 0, 0);
-    context.font = "700 8px monospace";
+    context.fillText(perfect ? "PERFECT LATCH" : spent ? "ENERJİ TÜKENDİ" : "SAFE LATCH", 0, 0);
+    context.font = "700 11px monospace";
     context.letterSpacing = "1.5px";
-    context.fillStyle = perfect ? "rgba(255,240,190,0.8)" : "rgba(190,245,255,0.58)";
+    context.fillStyle = perfect
+      ? "rgba(255,240,190,0.88)"
+      : spent
+        ? "rgba(215,219,238,0.78)"
+        : "rgba(190,245,255,0.8)";
     context.shadowBlur = 0;
-    context.fillText(perfect ? `COMBO x${runtime.combo}` : "COMBO RESET", 0, 18);
+    context.fillText(perfect ? `COMBO x${runtime.combo}` : spent ? "COMBO YOK" : "COMBO RESET", 0, 18);
     context.restore();
   }
 
@@ -1635,9 +1667,9 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
     context.scale(popScale, popScale);
     context.textAlign = "center";
     context.textBaseline = "middle";
-    context.font = "700 8px monospace";
+    context.font = "700 10px monospace";
     context.letterSpacing = "2px";
-    context.fillStyle = comboTier >= 2 ? "rgba(255,214,107,0.88)" : "rgba(226,240,255,0.56)";
+    context.fillStyle = comboTier >= 2 ? "rgba(255,214,107,0.92)" : "rgba(226,240,255,0.78)";
     context.fillText(tierLabel ?? "COMBO", 0, -12);
     context.font = `850 ${runtime.combo >= 15 ? 30 : runtime.combo >= 10 ? 27 : 24}px Arial`;
     context.fillStyle = comboTier >= 3 ? "#fff0a8" : comboTier >= 2 ? "#ff9be4" : "#ffffff";
@@ -1677,7 +1709,7 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
     context.shadowColor = runtime.milestoneLabel === "SUPERNOVA" ? "#ffd66b" : "#ff4fc8";
     context.shadowBlur = 30;
     context.fillText(runtime.milestoneLabel, 0, 0);
-    context.font = "700 8px monospace";
+    context.font = "700 10px monospace";
     context.letterSpacing = "2px";
     context.fillStyle = "rgba(225,252,255,0.86)";
     context.shadowColor = "#56f3ff";
@@ -1689,27 +1721,6 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
       0,
       23,
     );
-    context.restore();
-  }
-
-  if (
-    runtime.phase === "playing" &&
-    runtime.tutorial &&
-    runtime.player.orbitPlanetId === null
-  ) {
-    context.save();
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.font = "700 10px monospace";
-    context.letterSpacing = "1.6px";
-    context.fillStyle = "rgba(239,250,255,0.92)";
-    context.shadowColor = "#a96cff";
-    context.shadowBlur = 12;
-    context.fillText("YAKLAŞIRKEN BASILI TUT", WIDTH / 2, HEIGHT - 60);
-    context.font = "500 8px monospace";
-    context.fillStyle = "rgba(214,232,255,0.48)";
-    context.shadowBlur = 0;
-    context.fillText("YÖRÜNGE ÇİZGİSİNDE KİLİTLENİRSİN", WIDTH / 2, HEIGHT - 43);
     context.restore();
   }
 
@@ -1749,6 +1760,8 @@ export function OrbitRushGame() {
   const shopRef = useRef<HTMLElement>(null);
   const shopTriggerRef = useRef<HTMLButtonElement>(null);
   const tutorialCompletedRef = useRef(false);
+  const tutorialIntroAcknowledgedRef = useRef(false);
+  const tutorialIntroOpenRef = useRef(false);
   const settingsRef = useRef<DevSettings>({ ...DEFAULT_DEV_SETTINGS });
   const profileRef = useRef<PlayerProfile>({
     ...DEFAULT_PROFILE,
@@ -1765,6 +1778,7 @@ export function OrbitRushGame() {
   });
   const [profilePersistent, setProfilePersistent] = useState(true);
   const [showLaunchTutorial, setShowLaunchTutorial] = useState(false);
+  const [showTutorialIntro, setShowTutorialIntro] = useState(false);
   const [summary, setSummary] = useState({ score: 0, best: 0, crystals: 0, reason: "" });
 
   const closeShop = useCallback(() => {
@@ -1783,6 +1797,9 @@ export function OrbitRushGame() {
     runtimeRef.current = runtime;
     setShopOpen(false);
     setShowLaunchTutorial(tutorial);
+    const showIntro = tutorial && !tutorialIntroAcknowledgedRef.current;
+    tutorialIntroOpenRef.current = showIntro;
+    setShowTutorialIntro(showIntro);
     setPhase("ready");
   }, []);
 
@@ -1807,6 +1824,9 @@ export function OrbitRushGame() {
     setDevSettings(storedSettings);
     setProfile(storedProfile);
     setShowLaunchTutorial(tutorial);
+    tutorialIntroAcknowledgedRef.current = !tutorial;
+    tutorialIntroOpenRef.current = tutorial;
+    setShowTutorialIntro(tutorial);
     const runtime = createRuntime(best, tutorial, storedSettings, storedProfile);
     runtimeRef.current = runtime;
     audioRef.current = makeAudioEngine();
@@ -1908,6 +1928,8 @@ export function OrbitRushGame() {
     const lockToPlanet = (current: GameRuntime, target: Planet) => {
       const { player } = current;
       const brokenCombo = current.combo;
+      const awardsCombo = target.comboAvailable;
+      target.comboAvailable = false;
       const perfect =
         current.latchAttemptCount === 1 &&
         current.latchHoldTime <= current.settings.perfectLatchWindow;
@@ -1934,10 +1956,17 @@ export function OrbitRushGame() {
       current.lastLatchedAngle = angle;
       current.lastLatchedDirection = direction;
       current.latchHoldTime = 0;
-      current.visitedPlanets += 1;
+      if (awardsCombo) current.visitedPlanets += 1;
       audioRef.current?.setLatchState(current.holdInputActive, true);
 
-      if (perfect) {
+      if (!awardsCombo) {
+        current.latchFeedback = "spent";
+        current.latchFeedbackTimer = 0.58;
+        current.flash = Math.max(current.flash, 0.18);
+        current.shake = Math.max(current.shake, 0.35);
+        audioRef.current?.safeLock();
+        haptic(5);
+      } else if (perfect) {
         current.combo += 1;
         current.peakCombo = Math.max(current.peakCombo, current.combo);
         current.comboTimer = current.settings.comboDuration;
@@ -2002,9 +2031,9 @@ export function OrbitRushGame() {
         current,
         player.x,
         player.y,
-        `hsl(${target.hue} 100% 68%)`,
-        18 + getComboTier(current.combo) * 4,
-        86,
+        awardsCombo ? `hsl(${target.hue} 100% 68%)` : "#777d9e",
+        awardsCombo ? 18 + getComboTier(current.combo) * 4 : 8,
+        awardsCombo ? 86 : 42,
       );
       generateRows(current, current.cameraTargetY + HEIGHT * 2.55);
 
@@ -2012,6 +2041,8 @@ export function OrbitRushGame() {
         current.tutorial = false;
         tutorialCompletedRef.current = true;
         setShowLaunchTutorial(false);
+        tutorialIntroOpenRef.current = false;
+        setShowTutorialIntro(false);
         safeStorageSet("orbitrush-tutorial", "done");
       }
     };
@@ -2347,6 +2378,10 @@ export function OrbitRushGame() {
       if (event.target instanceof HTMLElement && event.target.closest("button, input, aside")) {
         return;
       }
+      if (tutorialIntroOpenRef.current) {
+        event.preventDefault();
+        return;
+      }
       if (activeInputSourceRef.current !== null) return;
       event.preventDefault();
       activeInputSourceRef.current = "keyboard";
@@ -2511,9 +2546,22 @@ export function OrbitRushGame() {
     haptic(owned ? 10 : [15, 20, 32]);
   }, []);
 
+  const acknowledgeTutorialIntro = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    tutorialIntroAcknowledgedRef.current = true;
+    tutorialIntroOpenRef.current = false;
+    setShowTutorialIntro(false);
+    haptic(8);
+  }, []);
+
   const onInputDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
     if ((event.target as HTMLElement).closest("button, input, aside")) return;
+    if (tutorialIntroOpenRef.current) {
+      event.preventDefault();
+      return;
+    }
     if (activeInputSourceRef.current !== null) return;
     event.preventDefault();
     activeInputSourceRef.current = "pointer";
@@ -2798,11 +2846,12 @@ export function OrbitRushGame() {
           </div>
         )}
 
-        {showLaunchTutorial && phase !== "dead" && !shopOpen && !devOpen && (
+        {showLaunchTutorial && showTutorialIntro && phase !== "dead" && !shopOpen && !devOpen && (
           <section
-            className={`latch-tutorial ${phase === "playing" ? "is-live" : ""}`}
-            role="note"
+            className="latch-tutorial is-intro"
+            role="dialog"
             aria-labelledby="latch-tutorial-title"
+            aria-describedby="latch-tutorial-description"
           >
             <div className="latch-demo" aria-hidden="true">
               <span className="latch-demo-orbit" />
@@ -2814,14 +2863,54 @@ export function OrbitRushGame() {
             <div className="latch-tutorial-copy">
               <span>TEK KONTROL</span>
               <strong id="latch-tutorial-title">BAS · FIRLAT · BASILI TUT</strong>
-              <p>Yaklaşırken tut; yörüngedeyken bırak.</p>
+              <p id="latch-tutorial-description">Yaklaşırken tut; yörüngedeyken bırak.</p>
+              <button type="button" onClick={acknowledgeTutorialIntro}>
+                ANLADIM
+              </button>
             </div>
           </section>
         )}
 
-        {phase === "ready" && (
+        {showLaunchTutorial &&
+          !showTutorialIntro &&
+          phase === "ready" &&
+          !shopOpen &&
+          !devOpen && (
+            <section className="launch-tutorial" role="note" aria-live="polite">
+              <span>HAZIRSAN</span>
+              <strong>FIRLATMAK İÇİN DOKUN</strong>
+              <p>Açıyı launcher belirler.</p>
+            </section>
+          )}
+
+        {showLaunchTutorial &&
+          !showTutorialIntro &&
+          phase === "playing" &&
+          !shopOpen &&
+          !devOpen && (
+            <section
+              className="latch-tutorial is-live"
+              role="note"
+              aria-labelledby="latch-tutorial-title"
+            >
+              <div className="latch-demo" aria-hidden="true">
+                <span className="latch-demo-orbit" />
+                <span className="latch-demo-planet" />
+                <span className="latch-demo-tangent" />
+                <span className="latch-demo-orb" />
+                <span className="latch-demo-touch" />
+              </div>
+              <div className="latch-tutorial-copy">
+                <span>SIRADAKİ HAMLE</span>
+                <strong id="latch-tutorial-title">YAKLAŞIRKEN BASILI TUT</strong>
+                <p>Yörüngeye kilitlenince bırak.</p>
+              </div>
+            </section>
+          )}
+
+        {phase === "ready" && (!showLaunchTutorial || showTutorialIntro) && (
           <div className="game-overlay">
-            <div className={`overlay-content ${showLaunchTutorial ? "has-latch-tutorial" : ""}`}>
+            <div className={`overlay-content ${showTutorialIntro ? "has-latch-tutorial" : ""}`}>
               <p className="eyebrow">Açıyı seç · Fırlat · Sonsuz koşu</p>
               <h1 className="game-title">
                 ORBIT<span>RUSH</span>

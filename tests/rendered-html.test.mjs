@@ -19,12 +19,13 @@ test("native Next.js build emits the Orbitrush game shell", async () => {
 });
 
 test("keeps progression, cosmetics, and game persistence without a Sites dependency", async () => {
-  const [game, page, layout, packageJson, mechanics] = await Promise.all([
+  const [game, page, layout, packageJson, mechanics, styles] = await Promise.all([
     readFile(new URL("../app/OrbitRushGame.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../mechanics.md", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
 
   assert.match(game, /orbitrush-best/);
@@ -53,8 +54,18 @@ test("keeps progression, cosmetics, and game persistence without a Sites depende
   assert.match(game, /activeInputSourceRef\.current !== "keyboard"/);
   assert.match(game, /tutorialCompletedRef\.current = true/);
   assert.match(game, /if \(brokenCombo > 5\) audioRef\.current\?\.comboFail\(\)/);
+  assert.match(game, /comboAvailable: boolean/);
+  assert.match(game, /comboAvailable: true/);
+  assert.match(game, /const awardsCombo = target\.comboAvailable/);
+  assert.match(game, /target\.comboAvailable = false/);
+  assert.match(game, /if \(awardsCombo\) current\.visitedPlanets \+= 1/);
+  assert.match(game, /ENERJİ TÜKENDİ/);
   assert.match(game, /BAS · FIRLAT · BASILI TUT/);
+  assert.match(game, /ANLADIM/);
+  assert.match(game, /FIRLATMAK İÇİN DOKUN/);
   assert.match(game, /YAKLAŞIRKEN BASILI TUT/);
+  assert.match(game, /if \(tutorialIntroOpenRef\.current\)/);
+  assert.match(game, /phase === "ready" && \(!showLaunchTutorial \|\| showTutorialIntro\)/);
   assert.match(game, /navigator\.vibrate/);
   assert.match(game, /SOLAR FLARE/);
   assert.match(game, /EVENT HORIZON/);
@@ -68,8 +79,16 @@ test("keeps progression, cosmetics, and game persistence without a Sites depende
   assert.match(mechanics, /## Asteroit kuşağı/);
   assert.match(mechanics, /x10 OVERDRIVE/);
   assert.match(mechanics, /açısı yavaşça sağa-sola salınan bir launcher/i);
+  assert.match(mechanics, /yalnız \*\*Anladım\*\* düğmesiyle kapatılan bir eğitim kartında/i);
   assert.match(mechanics, /ulaştığı her `x10` kombo katında bir ek can kazanır/i);
   assert.match(mechanics, /başarısızlık tonu/i);
+  assert.match(mechanics, /Her gezegen yalnız ilk başarılı latch'inde skor ve kombo sonucu üretir/i);
+  assert.doesNotMatch(
+    styles,
+    /font-size:[^;]*(?<![\d.])(?:[0-9](?:\.\d+)?|1[0-3](?:\.\d+)?)px\b/,
+  );
+  assert.match(styles, /font-size: 0\.875rem/);
+  assert.match(styles, /\.skin-list \{[\s\S]*?overflow-y: auto/);
   assert.match(page, /<OrbitRushGame \/>/);
   assert.match(layout, /og\.png/);
   assert.match(packageJson, /"build": "next build"/);

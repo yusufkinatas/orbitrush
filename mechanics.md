@@ -10,7 +10,7 @@ Orbitrush, dikey ekranda yukarı doğru ilerleyen sonsuz bir uzay koşusudur.
 - Tuş bırakıldığında oyuncu mevcut hareket yönüne teğet biçimde fırlar.
 - Kürenin gideceği teğet yön, launcher dahil her zaman dört kısa noktayla gösterilir. Gerçek latch tolerans bandı yalnız Developer Helper UI açıkken görünür.
 - Basılı tutarken çok hafif bir latch tonu duyulur; bir gezegene bağlanınca ton küçük biçimde değişir. Bağlı küre ile gezegenin merkezi arasında ince, kesikli bir enerji bağı çizilir.
-- İlk kez oynayan kullanıcıda launcher'dan fırlatma ve yaklaşırken basılı tutma anlatılır. İlk başarılı latch sonrasında eğitim tamamlanır ve kalıcı olarak gizlenir.
+- İlk kez oynayan kullanıcıda kontrol özeti önce yalnız **Anladım** düğmesiyle kapatılan bir eğitim kartında gösterilir; kart açıkken oyun girdisi başlamaz. Onaydan sonra tam ekran katman olmadan launcher'ın üzerinde **Fırlatmak için dokun** ipucu, ilk fırlatmadan sonra da **Yaklaşırken basılı tut** ipucu gösterilir. İlk başarılı latch sonrasında eğitim tamamlanır ve kalıcı olarak gizlenir.
 - Kombo arttıkça hem yörüngedeki dönüş hızı hem de gezegenler arasındaki uçuş hızı artar. Oyuncu bıraktığı gezegene, başka bir gezegene kilitlenmeden tekrar tutunamaz.
 - Oyun ilerledikçe gezegenler küçülür, gezegen sıraları arasındaki mesafe koşunun ulaştığı en yüksek tempoya göre büyür ve kamera yumuşak biçimde geri çekilir. Böylece yüksek hızda da uçuş süresi ve rota okuma alanı korunur.
 
@@ -38,6 +38,7 @@ Orbitrush, dikey ekranda yukarı doğru ilerleyen sonsuz bir uzay koşusudur.
 - İlk latch denemesi yakalanmadan kısa süre önce yapılırsa **Perfect Latch** olur.
 - Çok erken basılı tutmak veya uçuş sırasında bırakıp tekrar basmak **Safe Latch** olur.
 - Perfect Latch komboyu artırır; Safe Latch güvenle kilitler fakat komboyu sıfırlar.
+- Her gezegen yalnız ilk başarılı latch'inde skor ve kombo sonucu üretir; ilk latch gezegenin kombo çekirdeğini tüketir. Tükenmiş bir gezegene yeniden tutunmak harekete izin verir fakat skor vermez, komboyu artırmaz, sıfırlamaz veya kombo süresini yenilemez. Aktif çekirdek gezegenin merkezindeki ışıklı, kesikli enerji mührüyle gösterilir ve ilk latch'te kaybolur.
 - Safe Latch, `x5` seviyesinin üstündeki aktif bir komboyu bozarsa normal kilit sesinin altına düşük seviyeli, aşağı inen kısa bir başarısızlık tonu eklenir.
 
 ## Kombo ve ödüller
