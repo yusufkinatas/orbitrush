@@ -114,6 +114,231 @@ button {
   outline: none;
 }
 
+.dev-toggle {
+  position: absolute;
+  z-index: 7;
+  right: 14px;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(182, 219, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(4, 7, 20, 0.62);
+  color: rgba(226, 239, 255, 0.56);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+
+.dev-toggle:hover,
+.dev-toggle:focus-visible,
+.dev-toggle.is-active {
+  border-color: rgba(86, 243, 255, 0.62);
+  color: var(--cyan);
+  outline: none;
+  box-shadow: 0 0 15px rgba(86, 243, 255, 0.15);
+}
+
+.dev-panel {
+  position: absolute;
+  z-index: 8;
+  right: 12px;
+  bottom: 54px;
+  width: min(342px, calc(100% - 24px));
+  max-height: calc(100% - 78px);
+  padding: 17px;
+  overflow-y: auto;
+  border: 1px solid rgba(117, 229, 255, 0.24);
+  border-radius: 17px;
+  background:
+    linear-gradient(145deg, rgba(10, 13, 34, 0.96), rgba(5, 5, 18, 0.97)),
+    #07091b;
+  color: #f7fbff;
+  cursor: default;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.55),
+    0 0 40px rgba(86, 243, 255, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.dev-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dev-panel-heading span {
+  display: block;
+  margin-bottom: 4px;
+  color: rgba(86, 243, 255, 0.56);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+}
+
+.dev-panel-heading h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 720;
+  letter-spacing: -0.03em;
+}
+
+.dev-panel-heading > button {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.helper-switch {
+  display: flex;
+  width: 100%;
+  margin: 16px 0 17px;
+  padding: 11px 12px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(235, 244, 255, 0.62);
+  text-align: left;
+  cursor: pointer;
+}
+
+.helper-switch > span {
+  display: grid;
+  gap: 3px;
+  font-size: 9px;
+}
+
+.helper-switch b {
+  color: #eef8ff;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.helper-switch i {
+  display: grid;
+  min-width: 39px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.4);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.helper-switch.is-on {
+  border-color: rgba(86, 243, 255, 0.38);
+  background: rgba(86, 243, 255, 0.07);
+}
+
+.helper-switch.is-on i {
+  background: var(--cyan);
+  color: #021117;
+  box-shadow: 0 0 14px rgba(86, 243, 255, 0.42);
+}
+
+.dev-control {
+  display: grid;
+  margin-top: 14px;
+  gap: 8px;
+}
+
+.dev-control > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+}
+
+.dev-control b {
+  color: rgba(236, 245, 255, 0.68);
+  font-weight: 560;
+}
+
+.dev-control output {
+  color: var(--cyan);
+  font-weight: 700;
+}
+
+.dev-control input[type="range"] {
+  width: 100%;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--cyan);
+  cursor: ew-resize;
+}
+
+.dev-control input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(86, 243, 255, 0.48), rgba(169, 108, 255, 0.32));
+}
+
+.dev-control input[type="range"]::-webkit-slider-thumb {
+  width: 13px;
+  height: 13px;
+  margin-top: -5px;
+  border: 2px solid #dfffff;
+  border-radius: 50%;
+  appearance: none;
+  background: var(--cyan);
+  box-shadow: 0 0 10px rgba(86, 243, 255, 0.58);
+}
+
+.dev-panel-footer {
+  display: flex;
+  margin-top: 18px;
+  padding-top: 13px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.dev-panel-footer span {
+  color: rgba(223, 237, 255, 0.35);
+  font-size: 8px;
+}
+
+.dev-panel-footer button {
+  padding: 7px 9px;
+  border: 1px solid rgba(255, 214, 107, 0.25);
+  border-radius: 7px;
+  background: rgba(255, 214, 107, 0.055);
+  color: rgba(255, 222, 132, 0.8);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  cursor: pointer;
+}
+
+.dev-panel button:focus-visible,
+.dev-control input:focus-visible {
+  outline: 1px solid var(--cyan);
+  outline-offset: 2px;
+}
+
 .game-overlay {
   position: absolute;
   inset: 0;

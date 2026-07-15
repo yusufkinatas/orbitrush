@@ -6,9 +6,22 @@ const WIDTH = 390;
 const HEIGHT = 693.333;
 const TAU = Math.PI * 2;
 const PLAYER_RADIUS = 6.5;
-const BASE_SPEED = 146;
-const LOCK_TOLERANCE = 11;
-const COMBO_DURATION = 4.8;
+
+type DevSettings = {
+  comboDuration: number;
+  baseSpeed: number;
+  comboSpeedGain: number;
+  lockTolerance: number;
+  helpers: boolean;
+};
+
+const DEFAULT_DEV_SETTINGS: DevSettings = {
+  comboDuration: 4.8,
+  baseSpeed: 170,
+  comboSpeedGain: 0.045,
+  lockTolerance: 11,
+  helpers: false,
+};
 
 type Phase = "ready" | "playing" | "dead";
 type TutorialStage = "release" | "lock" | "done";
@@ -80,6 +93,8 @@ type GameRuntime = {
   tutorial: boolean;
   tutorialStage: TutorialStage;
   reason: DeathReason;
+  settings: DevSettings;
+  devPaused: boolean;
 };
 
 type AudioEngine = {
@@ -112,6 +127,42 @@ function safeStorageSet(key: string, value: string) {
     window.localStorage.setItem(key, value);
   } catch {
     // The game remains fully playable when storage is unavailable.
+  }
+}
+
+function loadDevSettings(): DevSettings {
+  try {
+    const parsed = JSON.parse(safeStorageGet("orbitrush-dev-settings", "{}")) as unknown;
+    const stored = (parsed && typeof parsed === "object" ? parsed : {}) as Partial<DevSettings>;
+    const comboDuration = Number(stored.comboDuration);
+    const baseSpeed = Number(stored.baseSpeed);
+    const comboSpeedGain = Number(stored.comboSpeedGain);
+    const lockTolerance = Number(stored.lockTolerance);
+    return {
+      comboDuration: clamp(
+        Number.isFinite(comboDuration) ? comboDuration : DEFAULT_DEV_SETTINGS.comboDuration,
+        2.5,
+        8,
+      ),
+      baseSpeed: clamp(
+        Number.isFinite(baseSpeed) ? baseSpeed : DEFAULT_DEV_SETTINGS.baseSpeed,
+        110,
+        240,
+      ),
+      comboSpeedGain: clamp(
+        Number.isFinite(comboSpeedGain) ? comboSpeedGain : DEFAULT_DEV_SETTINGS.comboSpeedGain,
+        0,
+        0.12,
+      ),
+      lockTolerance: clamp(
+        Number.isFinite(lockTolerance) ? lockTolerance : DEFAULT_DEV_SETTINGS.lockTolerance,
+        3,
+        24,
+      ),
+      helpers: Boolean(stored.helpers),
+    };
+  } catch {
+    return { ...DEFAULT_DEV_SETTINGS };
   }
 }
 
@@ -294,7 +345,7 @@ function generateRows(runtime: GameRuntime, upToY: number) {
   }
 }
 
-function createRuntime(best: number, tutorial: boolean): GameRuntime {
+function createRuntime(best: number, tutorial: boolean, settings: DevSettings): GameRuntime {
   const runtime = {
     phase: "ready" as Phase,
     planets: [] as Planet[],
@@ -319,6 +370,8 @@ function createRuntime(best: number, tutorial: boolean): GameRuntime {
     tutorial,
     tutorialStage: tutorial ? ("release" as TutorialStage) : ("done" as TutorialStage),
     reason: "BOŞLUĞA SAVRULDUN" as DeathReason,
+    settings: { ...settings },
+    devPaused: false,
   };
 
   const first: Planet = {
@@ -342,8 +395,8 @@ function createRuntime(best: number, tutorial: boolean): GameRuntime {
     x: first.x + first.orbit,
     y: first.y,
     vx: 0,
-    vy: BASE_SPEED,
-    speed: BASE_SPEED,
+    vy: settings.baseSpeed,
+    speed: settings.baseSpeed,
     angle: 0,
     direction: 1,
     orbitPlanetId: first.id,
@@ -396,7 +449,7 @@ function findLockCandidate(runtime: GameRuntime) {
     if (planet.id === player.releasedPlanetId && player.releaseCooldown > 0) continue;
     const distance = Math.hypot(player.x - planet.x, player.y - planet.y);
     const delta = Math.abs(distance - planet.orbit);
-    if (delta <= LOCK_TOLERANCE && delta < closestDelta) {
+    if (delta <= runtime.settings.lockTolerance && delta < closestDelta) {
       closest = planet;
       closestDelta = delta;
     }
@@ -454,14 +507,27 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
     const isCandidate = candidate?.id === planet.id;
     const hue = planet.hue;
 
-    context.save();
-    context.globalAlpha = isCandidate ? 0.18 : 0.035;
-    context.strokeStyle = `hsl(${hue} 100% 68%)`;
-    context.lineWidth = LOCK_TOLERANCE * 2;
-    context.beginPath();
-    context.arc(planet.x, sy, planet.orbit, 0, TAU);
-    context.stroke();
-    context.restore();
+    if (runtime.settings.helpers) {
+      const tolerance = runtime.settings.lockTolerance;
+      context.save();
+      context.globalAlpha = isCandidate ? 0.34 : 0.14;
+      context.strokeStyle = isCandidate ? "#56f3ff" : `hsl(${hue} 100% 68%)`;
+      context.lineWidth = tolerance * 2;
+      context.beginPath();
+      context.arc(planet.x, sy, planet.orbit, 0, TAU);
+      context.stroke();
+
+      context.globalAlpha = isCandidate ? 0.9 : 0.5;
+      context.lineWidth = 0.85;
+      context.setLineDash([3, 4]);
+      context.beginPath();
+      context.arc(planet.x, sy, Math.max(planet.orbit - tolerance, 1), 0, TAU);
+      context.stroke();
+      context.beginPath();
+      context.arc(planet.x, sy, planet.orbit + tolerance, 0, TAU);
+      context.stroke();
+      context.restore();
+    }
 
     context.save();
     context.strokeStyle = isCandidate
@@ -512,6 +578,34 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
     context.beginPath();
     context.arc(planet.x, sy, planet.radius * 0.72, Math.PI * 1.08, Math.PI * 1.75);
     context.stroke();
+    context.restore();
+  }
+
+  if (runtime.settings.helpers && runtime.phase !== "dead") {
+    const { player } = runtime;
+    let directionX = player.vx;
+    let directionY = player.vy;
+    if (player.orbitPlanetId !== null) {
+      directionX = -Math.sin(player.angle) * player.direction;
+      directionY = Math.cos(player.angle) * player.direction;
+    } else {
+      const magnitude = Math.hypot(directionX, directionY) || 1;
+      directionX /= magnitude;
+      directionY /= magnitude;
+    }
+
+    context.save();
+    context.fillStyle = "#8ff8ff";
+    context.shadowColor = "#56f3ff";
+    context.shadowBlur = 9;
+    [18, 32, 46, 60].forEach((distance, index) => {
+      const x = player.x + directionX * distance;
+      const y = worldToScreenY(runtime, player.y + directionY * distance);
+      context.globalAlpha = 0.92 - index * 0.17;
+      context.beginPath();
+      context.arc(x, y, 2.4 - index * 0.18, 0, TAU);
+      context.fill();
+    });
     context.restore();
   }
 
@@ -601,7 +695,7 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
   }
 
   if (runtime.phase === "playing" && runtime.combo > 0) {
-    const ratio = clamp(runtime.comboTimer / COMBO_DURATION, 0, 1);
+    const ratio = clamp(runtime.comboTimer / runtime.settings.comboDuration, 0, 1);
     const centerX = WIDTH / 2;
     const centerY = 105;
     const popScale = 1 + Math.sin(clamp(runtime.comboPop / 0.45, 0, 1) * Math.PI) * 0.17;
@@ -666,15 +760,18 @@ export function OrbitRushGame() {
   const runtimeRef = useRef<GameRuntime | null>(null);
   const audioRef = useRef<AudioEngine | null>(null);
   const actionRef = useRef<() => void>(() => undefined);
+  const settingsRef = useRef<DevSettings>({ ...DEFAULT_DEV_SETTINGS });
   const [phase, setPhase] = useState<Phase>("ready");
   const [muted, setMuted] = useState(false);
+  const [devOpen, setDevOpen] = useState(false);
+  const [devSettings, setDevSettings] = useState<DevSettings>({ ...DEFAULT_DEV_SETTINGS });
   const [summary, setSummary] = useState({ score: 0, best: 0, reason: "" });
 
   const restart = useCallback(() => {
     const old = runtimeRef.current;
     const best = old?.best ?? Number(safeStorageGet("orbitrush-best", "0"));
     const tutorial = safeStorageGet("orbitrush-tutorial", "") !== "done";
-    const runtime = createRuntime(best, tutorial);
+    const runtime = createRuntime(best, tutorial, settingsRef.current);
     runtime.phase = "playing";
     runtime.tutorialStage = tutorial ? "release" : "done";
     runtimeRef.current = runtime;
@@ -694,7 +791,10 @@ export function OrbitRushGame() {
 
     const best = Number(safeStorageGet("orbitrush-best", "0"));
     const tutorial = safeStorageGet("orbitrush-tutorial", "") !== "done";
-    const runtime = createRuntime(best, tutorial);
+    const storedSettings = loadDevSettings();
+    settingsRef.current = storedSettings;
+    setDevSettings(storedSettings);
+    const runtime = createRuntime(best, tutorial, storedSettings);
     runtimeRef.current = runtime;
     audioRef.current = makeAudioEngine();
     setSummary({ score: 0, best, reason: "" });
@@ -719,6 +819,7 @@ export function OrbitRushGame() {
       const current = runtimeRef.current;
       if (!current) return;
       audioRef.current?.ensure();
+      if (current.devPaused) return;
 
       if (current.phase === "ready") {
         current.phase = "playing";
@@ -768,7 +869,7 @@ export function OrbitRushGame() {
       player.releaseCooldown = 0;
 
       current.combo += 1;
-      current.comboTimer = COMBO_DURATION;
+      current.comboTimer = current.settings.comboDuration;
       current.comboPop = 0.45;
       const lockPoints = Math.round((target.risk ? 105 : 75) * Math.pow(current.combo, 1.34));
       current.score += lockPoints;
@@ -791,6 +892,7 @@ export function OrbitRushGame() {
     const update = (dt: number) => {
       const runtime = runtimeRef.current;
       if (!runtime) return;
+      if (runtime.devPaused) return;
       runtime.elapsed += dt;
       runtime.cameraY += (runtime.cameraTargetY - runtime.cameraY) * (1 - Math.exp(-dt * 4.8));
       runtime.shake = Math.max(0, runtime.shake - dt * 18);
@@ -801,7 +903,7 @@ export function OrbitRushGame() {
       if (runtime.phase === "ready") {
         const planet = planetById(runtime, runtime.player.orbitPlanetId);
         if (planet) {
-          runtime.player.angle += (BASE_SPEED / planet.orbit) * dt * 0.34;
+          runtime.player.angle += (runtime.settings.baseSpeed / planet.orbit) * dt * 0.34;
           runtime.player.x = planet.x + Math.cos(runtime.player.angle) * planet.orbit;
           runtime.player.y = planet.y + Math.sin(runtime.player.angle) * planet.orbit;
         }
@@ -818,7 +920,9 @@ export function OrbitRushGame() {
           }
         }
 
-        const targetSpeed = BASE_SPEED * (1 + Math.min(runtime.combo, 24) * 0.045);
+        const targetSpeed =
+          runtime.settings.baseSpeed *
+          (1 + Math.min(runtime.combo, 24) * runtime.settings.comboSpeedGain);
         runtime.player.speed += (targetSpeed - runtime.player.speed) * (1 - Math.exp(-dt * 2.7));
 
         const planet = planetById(runtime, runtime.player.orbitPlanetId);
@@ -921,6 +1025,55 @@ export function OrbitRushGame() {
     };
   }, [restart]);
 
+  useEffect(() => {
+    if (runtimeRef.current) runtimeRef.current.devPaused = devOpen;
+  }, [devOpen]);
+
+  const updateDevSetting = useCallback(
+    (key: keyof DevSettings, value: number | boolean) => {
+      const previous = settingsRef.current;
+      const next = { ...previous, [key]: value } as DevSettings;
+      settingsRef.current = next;
+      setDevSettings(next);
+      safeStorageSet("orbitrush-dev-settings", JSON.stringify(next));
+      const runtime = runtimeRef.current;
+      if (runtime) {
+        const remainingComboRatio =
+          runtime.combo > 0 ? clamp(runtime.comboTimer / previous.comboDuration, 0, 1) : 0;
+        runtime.settings = { ...next };
+        if (key === "comboDuration" && runtime.combo > 0) {
+          runtime.comboTimer = next.comboDuration * remainingComboRatio;
+        }
+        if (key === "baseSpeed" && runtime.phase === "ready") {
+          runtime.player.speed = next.baseSpeed;
+        }
+      }
+    },
+    [],
+  );
+
+  const resetDevSettings = useCallback(() => {
+    const previous = settingsRef.current;
+    const defaults = { ...DEFAULT_DEV_SETTINGS };
+    settingsRef.current = defaults;
+    setDevSettings(defaults);
+    safeStorageSet("orbitrush-dev-settings", JSON.stringify(defaults));
+    const runtime = runtimeRef.current;
+    if (runtime) {
+      const remainingComboRatio =
+        runtime.combo > 0 ? clamp(runtime.comboTimer / previous.comboDuration, 0, 1) : 0;
+      runtime.settings = { ...defaults };
+      if (runtime.combo > 0) runtime.comboTimer = defaults.comboDuration * remainingComboRatio;
+      if (runtime.phase === "ready") runtime.player.speed = defaults.baseSpeed;
+    }
+  }, []);
+
+  const toggleDevPanel = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDevOpen((value) => !value);
+  }, []);
+
   const onAction = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
     event.preventDefault();
@@ -954,6 +1107,111 @@ export function OrbitRushGame() {
         >
           {muted ? "×" : "♪"}
         </button>
+
+        <button
+          type="button"
+          className={`dev-toggle ${devSettings.helpers ? "is-active" : ""}`}
+          aria-label="Developer Helper UI"
+          aria-expanded={devOpen}
+          onPointerDown={toggleDevPanel}
+        >
+          DEV
+        </button>
+
+        {devOpen && (
+          <aside
+            className="dev-panel"
+            aria-label="Developer Helper UI ayarları"
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <div className="dev-panel-heading">
+              <div>
+                <span>ORBITRUSH LAB</span>
+                <h2>Developer Helper UI</h2>
+              </div>
+              <button type="button" aria-label="Developer menüsünü kapat" onClick={() => setDevOpen(false)}>
+                ×
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className={`helper-switch ${devSettings.helpers ? "is-on" : ""}`}
+              onClick={() => updateDevSetting("helpers", !devSettings.helpers)}
+            >
+              <span>
+                <b>Helper overlay</b>
+                Hitbox bandı + trajectory
+              </span>
+              <i>{devSettings.helpers ? "ON" : "OFF"}</i>
+            </button>
+
+            <label className="dev-control">
+              <span>
+                <b>Kombo süresi</b>
+                <output>{devSettings.comboDuration.toFixed(1)} sn</output>
+              </span>
+              <input
+                type="range"
+                min="2.5"
+                max="8"
+                step="0.1"
+                value={devSettings.comboDuration}
+                onChange={(event) => updateDevSetting("comboDuration", Number(event.target.value))}
+              />
+            </label>
+
+            <label className="dev-control">
+              <span>
+                <b>Başlangıç hızı</b>
+                <output>{Math.round(devSettings.baseSpeed)}</output>
+              </span>
+              <input
+                type="range"
+                min="110"
+                max="240"
+                step="5"
+                value={devSettings.baseSpeed}
+                onChange={(event) => updateDevSetting("baseSpeed", Number(event.target.value))}
+              />
+            </label>
+
+            <label className="dev-control">
+              <span>
+                <b>Kombo hız artışı</b>
+                <output>%{(devSettings.comboSpeedGain * 100).toFixed(1)} / kombo</output>
+              </span>
+              <input
+                type="range"
+                min="0"
+                max="0.12"
+                step="0.005"
+                value={devSettings.comboSpeedGain}
+                onChange={(event) => updateDevSetting("comboSpeedGain", Number(event.target.value))}
+              />
+            </label>
+
+            <label className="dev-control">
+              <span>
+                <b>Hit range</b>
+                <output>±{Math.round(devSettings.lockTolerance)} px</output>
+              </span>
+              <input
+                type="range"
+                min="3"
+                max="24"
+                step="1"
+                value={devSettings.lockTolerance}
+                onChange={(event) => updateDevSetting("lockTolerance", Number(event.target.value))}
+              />
+            </label>
+
+            <div className="dev-panel-footer">
+              <span>Menü açıkken oyun duraklar.</span>
+              <button type="button" onClick={resetDevSettings}>Reset to default</button>
+            </div>
+          </aside>
+        )}
 
         {phase === "ready" && (
           <div className="game-overlay">
