@@ -8,7 +8,6 @@ const TAU = Math.PI * 2;
 const PLAYER_RADIUS = 6.5;
 const PROFILE_KEY = "orbitrush-player-profile-v1";
 const SLOW_MOTION_COMBO = 10;
-const FIRST_LAUNCH_HOLD_MS = 180;
 
 type PlanetKind = "normal" | "fast" | "reverse" | "unstable" | "fragile" | "moving";
 type MovementAxis = "horizontal" | "vertical";
@@ -171,6 +170,12 @@ type Particle = {
 
 type TrailPoint = { x: number; y: number; life: number };
 
+type Launcher = {
+  x: number;
+  y: number;
+  angle: number;
+};
+
 type Player = {
   x: number;
   y: number;
@@ -189,6 +194,7 @@ type GameRuntime = {
   asteroids: Asteroid[];
   asteroidBelts: AsteroidBelt[];
   player: Player;
+  launcher: Launcher;
   cameraY: number;
   cameraTargetY: number;
   cameraZoom: number;
@@ -224,18 +230,23 @@ type GameRuntime = {
   settings: DevSettings;
   devPaused: boolean;
   holdInputActive: boolean;
-  firstLaunchPending: boolean;
-  firstLaunchPressedAt: number | null;
   latchHoldTime: number;
   latchAttemptCount: number;
   latchFeedback: "perfect" | "safe" | null;
   latchFeedbackTimer: number;
+  lives: number;
+  lastLatchedPlanetId: number | null;
+  lastLatchedAngle: number;
+  lastLatchedDirection: 1 | -1;
+  extraLifeTimer: number;
+  respawnTimer: number;
 };
 
 type AudioEngine = {
   ensure: () => void;
   setMuted: (value: boolean) => void;
   setIntensity: (combo: number) => void;
+  setLatchState: (held: boolean, attached: boolean) => void;
   release: () => void;
   lock: (combo: number) => void;
   safeLock: () => void;
@@ -244,6 +255,8 @@ type AudioEngine = {
   overdrive: (combo: number, milestone: boolean) => void;
   fracture: () => void;
   breakCombo: () => void;
+  extraLife: () => void;
+  respawn: () => void;
   death: () => void;
   close: () => void;
 };
@@ -427,6 +440,8 @@ function makeAudioEngine(): AudioEngine {
   let context: AudioContext | null = null;
   let master: GainNode | null = null;
   let ambient: GainNode | null = null;
+  let latchOscillator: OscillatorNode | null = null;
+  let latchGain: GainNode | null = null;
   let muted = false;
 
   const ensure = () => {
@@ -461,6 +476,17 @@ function makeAudioEngine(): AudioEngine {
       gain.connect(ambient!);
       oscillator.start();
     });
+
+    const latchTone = context.createOscillator();
+    const latchLevel = context.createGain();
+    latchTone.type = "sine";
+    latchTone.frequency.value = 96;
+    latchLevel.gain.value = 0;
+    latchTone.connect(latchLevel);
+    latchLevel.connect(master);
+    latchTone.start();
+    latchOscillator = latchTone;
+    latchGain = latchLevel;
   };
 
   const tone = (
@@ -501,6 +527,13 @@ function makeAudioEngine(): AudioEngine {
       if (!ambient || !context) return;
       ambient.gain.setTargetAtTime(0.025 + Math.min(combo, 20) * 0.0017, context.currentTime, 0.3);
     },
+    setLatchState(held, attached) {
+      if (!context || !latchGain || !latchOscillator) return;
+      const targetGain = held ? (attached ? 0.021 : 0.011) : 0;
+      const targetFrequency = attached ? 132 : 96;
+      latchGain.gain.setTargetAtTime(targetGain, context.currentTime, held ? 0.08 : 0.035);
+      latchOscillator.frequency.setTargetAtTime(targetFrequency, context.currentTime, 0.09);
+    },
     release() {
       tone(260, 0.2, 0.12, "sawtooth", 92);
       tone(520, 0.09, 0.055, "sine", 280, 0.01);
@@ -540,6 +573,14 @@ function makeAudioEngine(): AudioEngine {
     breakCombo() {
       tone(190, 0.22, 0.05, "triangle", 110);
     },
+    extraLife() {
+      tone(520, 0.18, 0.08, "sine", 780);
+      tone(780, 0.24, 0.06, "triangle", 1040, 0.08);
+    },
+    respawn() {
+      tone(120, 0.32, 0.07, "triangle", 240);
+      tone(240, 0.28, 0.045, "sine", 420, 0.08);
+    },
     death() {
       tone(180, 0.65, 0.18, "sawtooth", 34);
       tone(90, 0.8, 0.1, "square", 28, 0.03);
@@ -547,6 +588,8 @@ function makeAudioEngine(): AudioEngine {
     close() {
       if (context) void context.close();
       context = null;
+      latchOscillator = null;
+      latchGain = null;
     },
   };
 }
@@ -665,16 +708,16 @@ function createAsteroidBelt(runtime: GameRuntime, y: number, safeX: number) {
   const beltId = runtime.nextBeltId++;
   const late = runtime.row >= 25;
   const worldExpansion = clamp((runtime.row - 8) / 22, 0, 1) * 34;
-  const corridorRadius = late ? 54 : 62;
-  const desiredCount = late ? Math.floor(random(7, 10)) : Math.floor(random(5, 8));
+  const corridorRadius = late ? 72 : 82;
+  const desiredCount = late ? Math.floor(random(5, 8)) : Math.floor(random(4, 7));
   const asteroids: Asteroid[] = [];
   let attempts = 0;
 
   while (asteroids.length < desiredCount && attempts < 100) {
     attempts += 1;
-    const radius = random(late ? 9 : 8, late ? 15 : 13.5);
+    const radius = random(late ? 8 : 7, late ? 12.5 : 11.5);
     const x = random(24 + radius - worldExpansion, WIDTH - 24 - radius + worldExpansion);
-    const asteroidY = y + random(-68, 68);
+    const asteroidY = y + random(-58, 58);
     if (Math.abs(x - safeX) < corridorRadius + radius) continue;
     if (
       runtime.planets.some(
@@ -816,6 +859,7 @@ function createRuntime(
     asteroids: [],
     asteroidBelts: [],
     player: {} as Player,
+    launcher: { x: WIDTH * 0.5, y: 82, angle: Math.PI / 2 },
     cameraY: 0,
     cameraTargetY: 0,
     cameraZoom: 0.93,
@@ -851,52 +895,32 @@ function createRuntime(
     settings: { ...settings },
     devPaused: false,
     holdInputActive: false,
-    firstLaunchPending: true,
-    firstLaunchPressedAt: null,
     latchHoldTime: 0,
     latchAttemptCount: 0,
     latchFeedback: null,
     latchFeedbackTimer: 0,
+    lives: 1,
+    lastLatchedPlanetId: null,
+    lastLatchedAngle: 0,
+    lastLatchedDirection: 1,
+    extraLifeTimer: 0,
+    respawnTimer: 0,
   };
 
-  const first: Planet = {
-    id: runtime.nextPlanetId++,
-    kind: "normal",
-    x: WIDTH * 0.5,
-    y: 112,
-    baseX: WIDTH * 0.5,
-    baseY: 112,
-    velocityX: 0,
-    velocityY: 0,
-    radius: 34,
-    orbit: 70,
-    orbitSpeedMultiplier: 1,
-    movementAxis: null,
-    movementAmplitude: 0,
-    movementSpeed: 0,
-    movementPhase: 0,
-    fragileRemaining: Number.POSITIVE_INFINITY,
-    fractured: false,
-    hue: 271,
-    risk: false,
-    crystals: [
-      { angle: 0.85, collected: false },
-      { angle: 1.17, collected: false },
-      { angle: 1.49, collected: false },
-    ],
-  };
-  const tutorialTarget = createPlanet(runtime, 250, 348, false, true);
+  const tutorialTarget = createPlanet(runtime, 250, 340, false, true);
   const riskyTarget = createPlanet(runtime, 95, 382, true, true);
-  runtime.planets.push(first, tutorialTarget, riskyTarget);
+  runtime.planets.push(tutorialTarget, riskyTarget);
+  const launchX = Math.cos(runtime.launcher.angle);
+  const launchY = Math.sin(runtime.launcher.angle);
   runtime.player = {
-    x: first.x + first.orbit,
-    y: first.y,
-    vx: 0,
-    vy: settings.baseSpeed,
+    x: runtime.launcher.x + launchX * 32,
+    y: runtime.launcher.y + launchY * 32,
+    vx: launchX * settings.baseSpeed,
+    vy: launchY * settings.baseSpeed,
     speed: settings.baseSpeed,
     angle: 0,
     direction: 1,
-    orbitPlanetId: first.id,
+    orbitPlanetId: null,
     releasedPlanetId: null,
   };
   generateRows(runtime, HEIGHT * 2.35);
@@ -1368,7 +1392,37 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
     }
   }
 
-  if (runtime.settings.helpers && runtime.phase !== "dead") {
+  if (runtime.phase === "ready") {
+    const launcherY = worldToScreenY(runtime, runtime.launcher.y);
+    const directionX = Math.cos(runtime.launcher.angle);
+    const directionY = -Math.sin(runtime.launcher.angle);
+    context.save();
+    context.translate(runtime.launcher.x, launcherY);
+    context.strokeStyle = "rgba(169,108,255,0.72)";
+    context.fillStyle = "rgba(10,10,32,0.96)";
+    context.lineWidth = 2;
+    context.shadowColor = "#a96cff";
+    context.shadowBlur = 16;
+    context.beginPath();
+    context.arc(0, 0, 19, Math.PI * 0.12, Math.PI * 0.88, true);
+    context.stroke();
+    context.beginPath();
+    context.moveTo(directionX * 6 + directionY * 7, directionY * 6 - directionX * 7);
+    context.lineTo(directionX * 32 + directionY * 7, directionY * 32 - directionX * 7);
+    context.lineTo(directionX * 32 - directionY * 7, directionY * 32 + directionX * 7);
+    context.lineTo(directionX * 6 - directionY * 7, directionY * 6 + directionX * 7);
+    context.closePath();
+    context.fill();
+    context.stroke();
+    context.fillStyle = "#56f3ff";
+    context.shadowColor = "#56f3ff";
+    context.beginPath();
+    context.arc(0, 0, 3.2, 0, TAU);
+    context.fill();
+    context.restore();
+  }
+
+  if (runtime.phase !== "dead") {
     const { player } = runtime;
     const latchArmed = runtime.holdInputActive && player.orbitPlanetId === null;
     let directionX = player.vx;
@@ -1446,6 +1500,28 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
     context.restore();
   }
 
+  const attachedPlanet = planetById(runtime, runtime.player.orbitPlanetId);
+  if (runtime.phase === "playing" && attachedPlanet) {
+    const planetY = worldToScreenY(runtime, attachedPlanet.y);
+    const playerY = worldToScreenY(runtime, runtime.player.y);
+    context.save();
+    context.strokeStyle = "rgba(86,243,255,0.32)";
+    context.lineWidth = 1.1;
+    context.setLineDash([2, 4]);
+    context.shadowColor = "#56f3ff";
+    context.shadowBlur = 7;
+    context.beginPath();
+    context.moveTo(attachedPlanet.x, planetY);
+    context.lineTo(runtime.player.x, playerY);
+    context.stroke();
+    context.setLineDash([]);
+    context.fillStyle = "rgba(220,255,255,0.8)";
+    context.beginPath();
+    context.arc(attachedPlanet.x, planetY, 1.8, 0, TAU);
+    context.fill();
+    context.restore();
+  }
+
   if (runtime.phase !== "dead") {
     const playerY = worldToScreenY(runtime, runtime.player.y);
     drawPlayerOrb(context, runtime, playerY);
@@ -1477,9 +1553,12 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
 
     context.textAlign = "right";
     context.shadowBlur = 0;
-    context.font = "700 12px monospace";
+    context.font = "800 11px monospace";
+    context.fillStyle = "#ff8cdb";
+    context.fillText(`♥ ${runtime.lives}`, WIDTH - 15, 18);
+    context.font = "700 11px monospace";
     context.fillStyle = "#ffd66b";
-    context.fillText(`◆ ${runtime.walletCrystals}`, WIDTH - 55, 25);
+    context.fillText(`◆ ${runtime.walletCrystals}`, WIDTH - 15, 34);
     context.restore();
   }
 
@@ -1526,6 +1605,22 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
     context.fillStyle = perfect ? "rgba(255,240,190,0.8)" : "rgba(190,245,255,0.58)";
     context.shadowBlur = 0;
     context.fillText(perfect ? `COMBO x${runtime.combo}` : "COMBO RESET", 0, 18);
+    context.restore();
+  }
+
+  if (runtime.phase === "playing" && (runtime.extraLifeTimer > 0 || runtime.respawnTimer > 0)) {
+    const extraLife = runtime.extraLifeTimer > 0;
+    const timer = extraLife ? runtime.extraLifeTimer : runtime.respawnTimer;
+    context.save();
+    context.globalAlpha = clamp(timer / 0.24, 0, 1);
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.font = "850 16px Arial";
+    context.letterSpacing = "1.2px";
+    context.fillStyle = extraLife ? "#ff9be4" : "#8ff8ff";
+    context.shadowColor = extraLife ? "#ff4fc8" : "#56f3ff";
+    context.shadowBlur = 18;
+    context.fillText(extraLife ? "EXTRA LIFE +1" : "ORBIT RECOVERED", WIDTH / 2, 207);
     context.restore();
   }
 
@@ -1600,7 +1695,6 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
   if (
     runtime.phase === "playing" &&
     runtime.tutorial &&
-    !runtime.firstLaunchPending &&
     runtime.player.orbitPlanetId === null
   ) {
     context.save();
@@ -1684,12 +1778,12 @@ export function OrbitRushGame() {
     const tutorial =
       !tutorialCompletedRef.current && safeStorageGet("orbitrush-tutorial", "") !== "done";
     audioRef.current?.setIntensity(0);
+    audioRef.current?.setLatchState(false, false);
     const runtime = createRuntime(best, tutorial, settingsRef.current, profileRef.current);
-    runtime.phase = "playing";
     runtimeRef.current = runtime;
     setShopOpen(false);
     setShowLaunchTutorial(tutorial);
-    setPhase("playing");
+    setPhase("ready");
   }, []);
 
   useEffect(() => {
@@ -1721,16 +1815,63 @@ export function OrbitRushGame() {
     const die = (reason: DeathReason) => {
       const current = runtimeRef.current;
       if (!current || current.phase !== "playing") return;
+      const respawnPlanet = planetById(current, current.lastLatchedPlanetId);
+      if (current.lives > 1 && respawnPlanet) {
+        emitBurst(current, current.player.x, current.player.y, "#ff4fc8", 24, 150);
+        current.lives -= 1;
+        current.combo = 0;
+        current.comboTimer = 0;
+        current.comboPop = 0;
+        current.slowMotionTimer = 0;
+        current.slowMotionScale = 1;
+        if (respawnPlanet.fractured) {
+          respawnPlanet.fractured = false;
+          respawnPlanet.fragileRemaining = TAU * 0.75;
+        }
+        const activeOrbit = planetOrbitAt(respawnPlanet, current.elapsed);
+        current.player.angle = current.lastLatchedAngle;
+        current.player.direction = current.lastLatchedDirection;
+        current.player.speed = current.settings.baseSpeed;
+        current.player.x =
+          respawnPlanet.x + Math.cos(current.player.angle) * activeOrbit;
+        current.player.y =
+          respawnPlanet.y + Math.sin(current.player.angle) * activeOrbit;
+        current.player.vx =
+          -Math.sin(current.player.angle) * current.player.direction * current.player.speed;
+        current.player.vy =
+          Math.cos(current.player.angle) * current.player.direction * current.player.speed;
+        current.player.orbitPlanetId = respawnPlanet.id;
+        current.player.releasedPlanetId = null;
+        current.cameraY = respawnPlanet.y - HEIGHT * 0.33;
+        current.cameraTargetY = current.cameraY;
+        current.holdInputActive = false;
+        current.latchHoldTime = 0;
+        current.latchAttemptCount = 0;
+        current.latchFeedback = null;
+        current.latchFeedbackTimer = 0;
+        current.extraLifeTimer = 0;
+        current.respawnTimer = 1.15;
+        current.trail = [];
+        current.shake = 5;
+        current.flash = 1;
+        audioRef.current?.setLatchState(false, false);
+        audioRef.current?.setIntensity(0);
+        audioRef.current?.respawn();
+        haptic([28, 24, 45]);
+        return;
+      }
       current.phase = "dead";
       current.reason = reason;
+      current.holdInputActive = false;
       current.shake = 7;
       current.flash = 1;
       emitBurst(current, current.player.x, current.player.y, "#ff4fc8", 34, 190);
       emitBurst(current, current.player.x, current.player.y, "#56f3ff", 22, 130);
       current.best = Math.max(current.best, current.score);
       safeStorageSet("orbitrush-best", String(current.best));
-      audioRef.current?.death();
+      audioRef.current?.setLatchState(false, false);
       audioRef.current?.setIntensity(0);
+      audioRef.current?.death();
       haptic([45, 35, 90]);
       setSummary({
         score: current.score,
@@ -1751,17 +1892,15 @@ export function OrbitRushGame() {
       player.vx = tangentX * player.speed + clamp(planet.velocityX, -24, 24);
       player.vy = tangentY * player.speed + clamp(planet.velocityY, -24, 24);
       player.speed = Math.hypot(player.vx, player.vy);
+      current.lastLatchedAngle = player.angle;
+      current.lastLatchedDirection = player.direction;
       player.releasedPlanetId = planet.id;
       player.orbitPlanetId = null;
-      if (current.firstLaunchPending) {
-        current.firstLaunchPending = false;
-        setShowLaunchTutorial(false);
-      }
-      current.firstLaunchPressedAt = null;
       current.latchHoldTime = 0;
       current.latchAttemptCount = 0;
       const skin = skinById(current.skinId);
       emitBurst(current, player.x, player.y, skin.primary, 10 + getComboTier(current.combo) * 3, 60);
+      audioRef.current?.setLatchState(false, false);
       audioRef.current?.release();
       haptic(7);
     };
@@ -1791,8 +1930,12 @@ export function OrbitRushGame() {
       player.speed = Math.hypot(player.vx, player.vy);
       player.orbitPlanetId = target.id;
       player.releasedPlanetId = null;
+      current.lastLatchedPlanetId = target.id;
+      current.lastLatchedAngle = angle;
+      current.lastLatchedDirection = direction;
       current.latchHoldTime = 0;
       current.visitedPlanets += 1;
+      audioRef.current?.setLatchState(current.holdInputActive, true);
 
       if (perfect) {
         current.combo += 1;
@@ -1811,6 +1954,11 @@ export function OrbitRushGame() {
         current.shake = Math.min(1.5 + current.combo * 0.13, 4.5);
         audioRef.current?.lock(current.combo);
         audioRef.current?.setIntensity(current.combo);
+        if (current.combo % 10 === 0) {
+          current.lives += 1;
+          current.extraLifeTimer = 1.25;
+          audioRef.current?.extraLife();
+        }
         const milestone = current.combo === 5 || current.combo === 10 || current.combo === 15;
         if (milestone) {
           current.milestoneLabel = getComboTierLabel(current.combo);
@@ -1875,6 +2023,24 @@ export function OrbitRushGame() {
       setPhase("playing");
     };
 
+    const launchFromLauncher = (current: GameRuntime) => {
+      const directionX = Math.cos(current.launcher.angle);
+      const directionY = Math.sin(current.launcher.angle);
+      current.player.x = current.launcher.x + directionX * 32;
+      current.player.y = current.launcher.y + directionY * 32;
+      current.player.speed = current.settings.baseSpeed;
+      current.player.vx = directionX * current.player.speed;
+      current.player.vy = directionY * current.player.speed;
+      current.player.orbitPlanetId = null;
+      current.player.releasedPlanetId = null;
+      current.holdInputActive = true;
+      current.latchAttemptCount = 0;
+      current.latchHoldTime = 0;
+      emitBurst(current, current.player.x, current.player.y, "#56f3ff", 14, 72);
+      audioRef.current?.release();
+      audioRef.current?.setLatchState(true, false);
+    };
+
     inputDownRef.current = () => {
       let current = runtimeRef.current;
       if (!current) return;
@@ -1883,16 +2049,15 @@ export function OrbitRushGame() {
 
       if (current.phase === "ready") {
         startRun(current);
-        current.holdInputActive = true;
-        current.firstLaunchPressedAt = performance.now();
+        launchFromLauncher(current);
         return;
       }
       if (current.phase === "dead") {
         restart();
         current = runtimeRef.current;
         if (current) {
-          current.holdInputActive = true;
-          current.firstLaunchPressedAt = performance.now();
+          startRun(current);
+          launchFromLauncher(current);
         }
         return;
       }
@@ -1900,9 +2065,7 @@ export function OrbitRushGame() {
       const { player } = current;
       if (current.holdInputActive) return;
       current.holdInputActive = true;
-      if (current.firstLaunchPending && player.orbitPlanetId !== null) {
-        current.firstLaunchPressedAt = performance.now();
-      }
+      audioRef.current?.setLatchState(true, player.orbitPlanetId !== null);
       if (player.orbitPlanetId === null) {
         current.latchAttemptCount += 1;
         current.latchHoldTime = 0;
@@ -1914,28 +2077,18 @@ export function OrbitRushGame() {
     inputUpRef.current = () => {
       const current = runtimeRef.current;
       if (!current) return;
-      const wasHeld = current.holdInputActive;
-      const firstLaunchPressedAt = current.firstLaunchPressedAt;
+      const wasHolding = current.holdInputActive;
       current.holdInputActive = false;
-      current.firstLaunchPressedAt = null;
-      if (current.phase !== "playing" || !wasHeld) return;
-      if (current.player.orbitPlanetId !== null) {
-        const firstLaunchHeldLongEnough =
-          firstLaunchPressedAt !== null &&
-          performance.now() - firstLaunchPressedAt >= FIRST_LAUNCH_HOLD_MS;
-        if (current.firstLaunchPending && !firstLaunchHeldLongEnough) {
-          haptic(4);
-          return;
-        }
-        releaseFromOrbit(current);
-      }
+      audioRef.current?.setLatchState(false, false);
+      if (current.phase !== "playing") return;
+      if (wasHolding && current.player.orbitPlanetId !== null) releaseFromOrbit(current);
     };
 
     inputCancelRef.current = () => {
       const current = runtimeRef.current;
       if (!current) return;
       current.holdInputActive = false;
-      current.firstLaunchPressedAt = null;
+      audioRef.current?.setLatchState(false, false);
     };
 
     const update = (realDt: number) => {
@@ -1959,6 +2112,8 @@ export function OrbitRushGame() {
       runtime.milestoneTimer = Math.max(0, runtime.milestoneTimer - realDt);
       if (runtime.milestoneTimer === 0) runtime.milestoneLabel = null;
       runtime.latchFeedbackTimer = Math.max(0, runtime.latchFeedbackTimer - realDt);
+      runtime.extraLifeTimer = Math.max(0, runtime.extraLifeTimer - realDt);
+      runtime.respawnTimer = Math.max(0, runtime.respawnTimer - realDt);
       if (runtime.latchFeedbackTimer === 0) runtime.latchFeedback = null;
 
       for (const body of runtime.planets) {
@@ -1981,14 +2136,14 @@ export function OrbitRushGame() {
       }
 
       if (runtime.phase === "ready") {
-        const planet = planetById(runtime, runtime.player.orbitPlanetId);
-        if (planet) {
-          const activeOrbit = planetOrbitAt(planet, runtime.elapsed);
-          runtime.player.angle +=
-            (runtime.settings.baseSpeed / activeOrbit) * gameDt * 0.34;
-          runtime.player.x = planet.x + Math.cos(runtime.player.angle) * activeOrbit;
-          runtime.player.y = planet.y + Math.sin(runtime.player.angle) * activeOrbit;
-        }
+        runtime.launcher.angle = Math.PI / 2 + Math.sin(runtime.elapsed * 1.28) * 0.5;
+        const directionX = Math.cos(runtime.launcher.angle);
+        const directionY = Math.sin(runtime.launcher.angle);
+        runtime.player.x = runtime.launcher.x + directionX * 32;
+        runtime.player.y = runtime.launcher.y + directionY * 32;
+        runtime.player.speed = runtime.settings.baseSpeed;
+        runtime.player.vx = directionX * runtime.player.speed;
+        runtime.player.vy = directionY * runtime.player.speed;
       }
 
       if (runtime.phase === "playing") {
@@ -2029,6 +2184,7 @@ export function OrbitRushGame() {
               releaseFromOrbit(runtime);
               planet.fractured = true;
               runtime.holdInputActive = false;
+              audioRef.current?.setLatchState(false, false);
               runtime.flash = 0.9;
               runtime.shake = 4;
               emitBurst(runtime, planet.x, planet.y, "#ff6f9f", 30, 135);
@@ -2061,7 +2217,7 @@ export function OrbitRushGame() {
                 runtime.player.y,
                 body.x,
                 body.y,
-                body.radius + PLAYER_RADIUS * 0.74,
+                body.radius + PLAYER_RADIUS * 0.5,
               )
             ) {
               die("ÇARPIŞMA");
@@ -2080,7 +2236,7 @@ export function OrbitRushGame() {
                 runtime.player.y,
                 asteroid.x,
                 asteroid.y,
-                asteroid.radius + PLAYER_RADIUS * 0.78,
+                asteroid.radius + PLAYER_RADIUS * 0.45,
               )
             ) {
               die("ASTEROİDE ÇARPTIN");
@@ -2163,7 +2319,8 @@ export function OrbitRushGame() {
       runtime.planets = runtime.planets.filter(
         (body) =>
           (!body.fractured && body.baseY > runtime.cameraY - 260) ||
-          body.id === runtime.player.orbitPlanetId,
+          body.id === runtime.player.orbitPlanetId ||
+          body.id === runtime.lastLatchedPlanetId,
       );
       runtime.asteroids = runtime.asteroids.filter(
         (asteroid) => asteroid.y > runtime.cameraY - 280,
@@ -2417,7 +2574,7 @@ export function OrbitRushGame() {
         <canvas
           ref={canvasRef}
           className="game-canvas"
-          aria-label="Orbitrush oyun alanı. Basılı tutarak kilitlen, bırakarak yörüngeden çık."
+          aria-label="Orbitrush oyun alanı. İlk basış launcher'dan fırlatır; basılı tutarak kilitlen, bırakarak yörüngeden çık."
         />
 
         <button
@@ -2475,7 +2632,7 @@ export function OrbitRushGame() {
             >
               <span>
                 <b>Helper overlay</b>
-                Hitbox bandı + trajectory
+                Hitbox bandı + hız verisi
               </span>
               <i>{devSettings.helpers ? "ON" : "OFF"}</i>
             </button>
@@ -2655,9 +2812,9 @@ export function OrbitRushGame() {
               <span className="latch-demo-touch" />
             </div>
             <div className="latch-tutorial-copy">
-              <span>TEK HAREKET</span>
-              <strong id="latch-tutorial-title">BASILI TUT · AÇIYI SEÇ</strong>
-              <p>Bırakınca teğet yönde fırlarsın.</p>
+              <span>TEK KONTROL</span>
+              <strong id="latch-tutorial-title">BAS · FIRLAT · BASILI TUT</strong>
+              <p>Yaklaşırken tut; yörüngedeyken bırak.</p>
             </div>
           </section>
         )}
@@ -2665,13 +2822,13 @@ export function OrbitRushGame() {
         {phase === "ready" && (
           <div className="game-overlay">
             <div className={`overlay-content ${showLaunchTutorial ? "has-latch-tutorial" : ""}`}>
-              <p className="eyebrow">Basılı tut · Bırak · Sonsuz koşu</p>
+              <p className="eyebrow">Açıyı seç · Fırlat · Sonsuz koşu</p>
               <h1 className="game-title">
                 ORBIT<span>RUSH</span>
               </h1>
               <p className="tagline">Yörüngeyi kır. Boşluğu yakala.</p>
               <div className="input-prompt">
-                {showLaunchTutorial ? "Basılı tut · sonra bırak" : "Basılı tut / Space"}
+                Basılı tut / Space · Fırlat
               </div>
             </div>
           </div>
