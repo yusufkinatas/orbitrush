@@ -59,6 +59,11 @@ test("removes disposable starter UI and keeps local game persistence", async () 
   assert.match(game, /baseSpeed: 170/);
   assert.match(game, /comboSpeedGain: 0\.045/);
   assert.match(game, /lockTolerance: 11/);
+  assert.match(game, /controlScheme: "toggle"/);
+  assert.match(game, /latchWindow: 0\.25/);
+  assert.match(game, /holdInputActive/);
+  assert.match(game, /addEventListener\("keyup"/);
+  assert.match(game, /UÇUŞ · SABİT/);
   assert.match(game, /\[18, 32, 46, 60\]/);
   assert.match(page, /<OrbitRushGame \/>/);
   assert.match(layout, /og\.png/);
