@@ -12,8 +12,7 @@ type DevSettings = {
   baseSpeed: number;
   comboSpeedGain: number;
   lockTolerance: number;
-  controlScheme: "toggle" | "hold";
-  latchWindow: number;
+  perfectLatchWindow: number;
   helpers: boolean;
 };
 
@@ -22,14 +21,13 @@ const DEFAULT_DEV_SETTINGS: DevSettings = {
   baseSpeed: 170,
   comboSpeedGain: 0.045,
   lockTolerance: 11,
-  controlScheme: "toggle",
-  latchWindow: 0.25,
+  perfectLatchWindow: 0.25,
   helpers: false,
 };
 
 type Phase = "ready" | "playing" | "dead";
 type TutorialStage = "release" | "lock" | "done";
-type DeathReason = "ZAMANLAMA HATASI" | "ÇARPIŞMA" | "BOŞLUĞA SAVRULDUN";
+type DeathReason = "ÇARPIŞMA" | "BOŞLUĞA SAVRULDUN";
 
 type Crystal = {
   angle: number;
@@ -70,7 +68,6 @@ type Player = {
   direction: 1 | -1;
   orbitPlanetId: number | null;
   releasedPlanetId: number | null;
-  releaseCooldown: number;
 };
 
 type GameRuntime = {
@@ -100,7 +97,10 @@ type GameRuntime = {
   settings: DevSettings;
   devPaused: boolean;
   holdInputActive: boolean;
-  latchArmedTimer: number;
+  latchHoldTime: number;
+  latchAttemptCount: number;
+  latchFeedback: "perfect" | "safe" | null;
+  latchFeedbackTimer: number;
 };
 
 type AudioEngine = {
@@ -109,6 +109,7 @@ type AudioEngine = {
   setIntensity: (combo: number) => void;
   release: () => void;
   lock: (combo: number) => void;
+  safeLock: () => void;
   crystal: (combo: number) => void;
   breakCombo: () => void;
   death: () => void;
@@ -144,7 +145,7 @@ function loadDevSettings(): DevSettings {
     const baseSpeed = Number(stored.baseSpeed);
     const comboSpeedGain = Number(stored.comboSpeedGain);
     const lockTolerance = Number(stored.lockTolerance);
-    const latchWindow = Number(stored.latchWindow);
+    const perfectLatchWindow = Number(stored.perfectLatchWindow);
     return {
       comboDuration: clamp(
         Number.isFinite(comboDuration) ? comboDuration : DEFAULT_DEV_SETTINGS.comboDuration,
@@ -166,11 +167,12 @@ function loadDevSettings(): DevSettings {
         3,
         24,
       ),
-      controlScheme: stored.controlScheme === "hold" ? "hold" : "toggle",
-      latchWindow: clamp(
-        Number.isFinite(latchWindow) ? latchWindow : DEFAULT_DEV_SETTINGS.latchWindow,
+      perfectLatchWindow: clamp(
+        Number.isFinite(perfectLatchWindow)
+          ? perfectLatchWindow
+          : DEFAULT_DEV_SETTINGS.perfectLatchWindow,
         0.08,
-        0.6,
+        0.5,
       ),
       helpers: Boolean(stored.helpers),
     };
@@ -266,6 +268,10 @@ function makeAudioEngine(): AudioEngine {
       tone(note, 0.22, 0.12, "triangle", note * 1.8);
       tone(note * 1.5, 0.28, 0.065, "sine", note * 2.1, 0.035);
       if (combo > 4) tone(note * 2, 0.16, 0.035, "sine", note * 2.5, 0.07);
+    },
+    safeLock() {
+      tone(230, 0.2, 0.07, "triangle", 170);
+      tone(345, 0.15, 0.035, "sine", 255, 0.025);
     },
     crystal(combo) {
       const note = 740 + Math.min(combo, 18) * 22;
@@ -386,7 +392,10 @@ function createRuntime(best: number, tutorial: boolean, settings: DevSettings): 
     settings: { ...settings },
     devPaused: false,
     holdInputActive: false,
-    latchArmedTimer: 0,
+    latchHoldTime: 0,
+    latchAttemptCount: 0,
+    latchFeedback: null,
+    latchFeedbackTimer: 0,
   };
 
   const first: Planet = {
@@ -416,7 +425,6 @@ function createRuntime(best: number, tutorial: boolean, settings: DevSettings): 
     direction: 1,
     orbitPlanetId: first.id,
     releasedPlanetId: null,
-    releaseCooldown: 0,
   };
   generateRows(runtime, HEIGHT * 2.2);
   return runtime;
@@ -461,12 +469,7 @@ function findLockCandidate(runtime: GameRuntime) {
   let closestDelta = Number.POSITIVE_INFINITY;
 
   for (const planet of runtime.planets) {
-    if (
-      planet.id === player.releasedPlanetId &&
-      (runtime.settings.controlScheme === "hold" || player.releaseCooldown > 0)
-    ) {
-      continue;
-    }
+    if (planet.id === player.releasedPlanetId) continue;
     const distance = Math.hypot(player.x - planet.x, player.y - planet.y);
     const delta = Math.abs(distance - planet.orbit);
     if (delta <= runtime.settings.lockTolerance && delta < closestDelta) {
@@ -603,7 +606,7 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
 
   if (runtime.settings.helpers && runtime.phase !== "dead") {
     const { player } = runtime;
-    const latchArmed = runtime.settings.controlScheme === "hold" && runtime.latchArmedTimer > 0;
+    const latchArmed = runtime.holdInputActive && player.orbitPlanetId === null;
     let directionX = player.vx;
     let directionY = player.vy;
     if (player.orbitPlanetId !== null) {
@@ -718,8 +721,8 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
   if (runtime.settings.helpers && runtime.phase === "playing") {
     const motionState = runtime.player.orbitPlanetId === null ? "UÇUŞ · SABİT" : "YÖRÜNGE";
     const latchState =
-      runtime.settings.controlScheme === "hold" && runtime.latchArmedTimer > 0
-        ? ` · LATCH ${runtime.latchArmedTimer.toFixed(2)}s`
+      runtime.holdInputActive && runtime.player.orbitPlanetId === null
+        ? ` · LATCH ${runtime.latchHoldTime.toFixed(2)}s`
         : "";
     context.save();
     context.textAlign = "center";
@@ -732,6 +735,32 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
       WIDTH / 2,
       53,
     );
+    context.restore();
+  }
+
+  if (runtime.phase === "playing" && runtime.latchFeedbackTimer > 0 && runtime.latchFeedback) {
+    const perfect = runtime.latchFeedback === "perfect";
+    const duration = perfect ? 0.85 : 0.7;
+    const progress = 1 - clamp(runtime.latchFeedbackTimer / duration, 0, 1);
+    const alpha = clamp(runtime.latchFeedbackTimer / 0.2, 0, 1);
+    const scale = 0.88 + Math.sin(Math.min(progress * Math.PI, Math.PI)) * 0.16;
+    context.save();
+    context.translate(WIDTH / 2, 163 - progress * 10);
+    context.scale(scale, scale);
+    context.globalAlpha = alpha;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.font = `850 ${perfect ? 18 : 15}px Arial`;
+    context.letterSpacing = perfect ? "1.4px" : "1px";
+    context.fillStyle = perfect ? "#ffd66b" : "#8ff8ff";
+    context.shadowColor = perfect ? "#ff4fc8" : "#56f3ff";
+    context.shadowBlur = perfect ? 20 : 10;
+    context.fillText(perfect ? "PERFECT LATCH" : "SAFE LATCH", 0, 0);
+    context.font = "700 8px monospace";
+    context.letterSpacing = "1.5px";
+    context.fillStyle = perfect ? "rgba(255,240,190,0.8)" : "rgba(190,245,255,0.58)";
+    context.shadowBlur = 0;
+    context.fillText(perfect ? `COMBO x${runtime.combo}` : "COMBO RESET", 0, 18);
     context.restore();
   }
 
@@ -774,21 +803,10 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
 
   if (runtime.phase === "playing" && runtime.tutorial && runtime.tutorialStage !== "done") {
     const lockMode = runtime.tutorialStage === "lock";
-    const holdMode = runtime.settings.controlScheme === "hold";
-    const tutorialTitle = holdMode
-      ? lockMode
-        ? "BASILI TUT · KİLİTLEN"
-        : "BIRAK · KİLİDİ AÇ"
-      : lockMode
-        ? "YÖRÜNGEDE DOKUN · KİLİTLEN"
-        : "DOKUN · KİLİDİ AÇ";
-    const tutorialDetail = holdMode
-      ? lockMode
-        ? "KISA LATCH PENCERESİNİ KULLAN"
-        : "TEĞET YÖNDE FIRLAYACAKSIN"
-      : lockMode
-        ? "ERKEN YA DA GEÇ DOKUNMA"
-        : "TEĞET YÖNDE FIRLAYACAKSIN";
+    const tutorialTitle = lockMode ? "BASILI TUT · KİLİTLEN" : "BIRAK · KİLİDİ AÇ";
+    const tutorialDetail = lockMode
+      ? "PERFECT İÇİN SON ANDA BAS"
+      : "TEĞET YÖNDE FIRLAYACAKSIN";
     context.save();
     context.textAlign = "center";
     context.textBaseline = "middle";
@@ -883,9 +901,9 @@ export function OrbitRushGame() {
       player.vx = tangentX * player.speed;
       player.vy = tangentY * player.speed;
       player.releasedPlanetId = planet.id;
-      player.releaseCooldown = 0.38;
       player.orbitPlanetId = null;
-      current.latchArmedTimer = 0;
+      current.latchHoldTime = 0;
+      current.latchAttemptCount = 0;
       current.tutorialStage = current.tutorial ? "lock" : "done";
       emitBurst(current, player.x, player.y, "#56f3ff", 10, 60);
       audioRef.current?.release();
@@ -893,6 +911,9 @@ export function OrbitRushGame() {
 
     const lockToPlanet = (current: GameRuntime, target: Planet) => {
       const { player } = current;
+      const perfect =
+        current.latchAttemptCount === 1 &&
+        current.latchHoldTime <= current.settings.perfectLatchWindow;
       const angle = Math.atan2(player.y - target.y, player.x - target.x);
       const tangentX = -Math.sin(angle);
       const tangentY = Math.cos(angle);
@@ -904,21 +925,35 @@ export function OrbitRushGame() {
       player.speed = Math.hypot(player.vx, player.vy);
       player.orbitPlanetId = target.id;
       player.releasedPlanetId = null;
-      player.releaseCooldown = 0;
-      current.latchArmedTimer = 0;
+      current.latchHoldTime = 0;
 
-      current.combo += 1;
-      current.comboTimer = current.settings.comboDuration;
-      current.comboPop = 0.45;
-      const lockPoints = Math.round((target.risk ? 105 : 75) * Math.pow(current.combo, 1.34));
-      current.score += lockPoints;
+      if (perfect) {
+        current.combo += 1;
+        current.comboTimer = current.settings.comboDuration;
+        current.comboPop = 0.45;
+        const lockPoints = Math.round((target.risk ? 105 : 75) * Math.pow(current.combo, 1.34));
+        current.score += lockPoints;
+        current.latchFeedback = "perfect";
+        current.latchFeedbackTimer = 0.85;
+        current.flash = 1;
+        current.shake = Math.min(1.5 + current.combo * 0.13, 4.5);
+        audioRef.current?.lock(current.combo);
+        audioRef.current?.setIntensity(current.combo);
+      } else {
+        current.combo = 0;
+        current.comboTimer = 0;
+        current.comboPop = 0;
+        current.score += target.risk ? 55 : 35;
+        current.latchFeedback = "safe";
+        current.latchFeedbackTimer = 0.7;
+        current.flash = 0.45;
+        current.shake = 1.2;
+        audioRef.current?.safeLock();
+        audioRef.current?.setIntensity(0);
+      }
       current.best = Math.max(current.best, current.score);
       current.cameraTargetY = Math.max(current.cameraTargetY, target.y - HEIGHT * 0.33);
-      current.flash = 1;
-      current.shake = Math.min(1.5 + current.combo * 0.13, 4.5);
       emitBurst(current, player.x, player.y, target.risk ? "#ff4fc8" : "#a96cff", 18, 86);
-      audioRef.current?.lock(current.combo);
-      audioRef.current?.setIntensity(current.combo);
       generateRows(current, current.cameraTargetY + HEIGHT * 2.1);
 
       if (current.tutorial) {
@@ -939,38 +974,25 @@ export function OrbitRushGame() {
       if (!current) return;
       audioRef.current?.ensure();
       if (current.devPaused) return;
-      const holdMode = current.settings.controlScheme === "hold";
 
       if (current.phase === "ready") {
         startRun(current);
-        if (holdMode) current.holdInputActive = true;
+        current.holdInputActive = true;
         return;
       }
       if (current.phase === "dead") {
         restart();
         current = runtimeRef.current;
-        if (current && holdMode) current.holdInputActive = true;
+        if (current) current.holdInputActive = true;
         return;
       }
 
       const { player } = current;
-      if (!holdMode) {
-        if (player.orbitPlanetId !== null) {
-          releaseFromOrbit(current);
-          return;
-        }
-        const target = findLockCandidate(current);
-        if (!target) {
-          die("ZAMANLAMA HATASI");
-          return;
-        }
-        lockToPlanet(current, target);
-        return;
-      }
-
+      if (current.holdInputActive) return;
       current.holdInputActive = true;
       if (player.orbitPlanetId === null) {
-        current.latchArmedTimer = current.settings.latchWindow;
+        current.latchAttemptCount += 1;
+        current.latchHoldTime = 0;
         const target = findLockCandidate(current);
         if (target) lockToPlanet(current, target);
       }
@@ -978,9 +1000,8 @@ export function OrbitRushGame() {
 
     inputUpRef.current = () => {
       const current = runtimeRef.current;
-      if (!current || current.settings.controlScheme !== "hold") return;
+      if (!current) return;
       current.holdInputActive = false;
-      current.latchArmedTimer = 0;
       if (current.phase !== "playing") return;
       if (current.player.orbitPlanetId !== null) releaseFromOrbit(current);
     };
@@ -994,8 +1015,8 @@ export function OrbitRushGame() {
       runtime.shake = Math.max(0, runtime.shake - dt * 18);
       runtime.flash = Math.max(0, runtime.flash - dt * 3.6);
       runtime.comboPop = Math.max(0, runtime.comboPop - dt);
-      runtime.player.releaseCooldown = Math.max(0, runtime.player.releaseCooldown - dt);
-      runtime.latchArmedTimer = Math.max(0, runtime.latchArmedTimer - dt);
+      runtime.latchFeedbackTimer = Math.max(0, runtime.latchFeedbackTimer - dt);
+      if (runtime.latchFeedbackTimer === 0) runtime.latchFeedback = null;
 
       if (runtime.phase === "ready") {
         const planet = planetById(runtime, runtime.player.orbitPlanetId);
@@ -1035,11 +1056,8 @@ export function OrbitRushGame() {
           runtime.player.x += runtime.player.vx * dt;
           runtime.player.y += runtime.player.vy * dt;
 
-          if (
-            runtime.settings.controlScheme === "hold" &&
-            runtime.holdInputActive &&
-            runtime.latchArmedTimer > 0
-          ) {
+          if (runtime.holdInputActive) {
+            runtime.latchHoldTime += dt;
             const target = findLockCandidate(runtime);
             if (target) lockToPlanet(runtime, target);
           }
@@ -1145,7 +1163,7 @@ export function OrbitRushGame() {
   }, [devOpen]);
 
   const updateDevSetting = useCallback(
-    (key: keyof DevSettings, value: number | boolean | "toggle" | "hold") => {
+    (key: keyof DevSettings, value: number | boolean) => {
       const previous = settingsRef.current;
       const next = { ...previous, [key]: value } as DevSettings;
       settingsRef.current = next;
@@ -1161,10 +1179,6 @@ export function OrbitRushGame() {
         }
         if (key === "baseSpeed" && runtime.phase === "ready") {
           runtime.player.speed = next.baseSpeed;
-        }
-        if (key === "controlScheme") {
-          runtime.holdInputActive = false;
-          runtime.latchArmedTimer = 0;
         }
       }
     },
@@ -1233,11 +1247,7 @@ export function OrbitRushGame() {
         <canvas
           ref={canvasRef}
           className="game-canvas"
-          aria-label={
-            devSettings.controlScheme === "hold"
-              ? "Orbitrush oyun alanı. Basılı tutarak kilitlen, bırakarak yörüngeden çık."
-              : "Orbitrush oyun alanı. Dokunarak veya Space tuşuyla yörünge kilidini değiştir."
-          }
+          aria-label="Orbitrush oyun alanı. Basılı tutarak kilitlen, bırakarak yörüngeden çık."
         />
 
         <button
@@ -1275,31 +1285,6 @@ export function OrbitRushGame() {
               </button>
             </div>
 
-            <div className="control-scheme">
-              <span>Kontrol şeması</span>
-              <div role="group" aria-label="Kontrol şeması seçimi">
-                <button
-                  type="button"
-                  className={devSettings.controlScheme === "toggle" ? "is-selected" : ""}
-                  onClick={() => updateDevSetting("controlScheme", "toggle")}
-                >
-                  Tap / Toggle
-                </button>
-                <button
-                  type="button"
-                  className={devSettings.controlScheme === "hold" ? "is-selected" : ""}
-                  onClick={() => updateDevSetting("controlScheme", "hold")}
-                >
-                  Hold / Latch
-                </button>
-              </div>
-              <small>
-                {devSettings.controlScheme === "hold"
-                  ? "Basılı tut: latch denemesi · Bırak: yörüngeden çık"
-                  : "Her basışta kilidi aç veya kilitlen"}
-              </small>
-            </div>
-
             <button
               type="button"
               className={`helper-switch ${devSettings.helpers ? "is-on" : ""}`}
@@ -1312,22 +1297,22 @@ export function OrbitRushGame() {
               <i>{devSettings.helpers ? "ON" : "OFF"}</i>
             </button>
 
-            {devSettings.controlScheme === "hold" && (
-              <label className="dev-control">
-                <span>
-                  <b>Latch penceresi</b>
-                  <output>{devSettings.latchWindow.toFixed(2)} sn</output>
-                </span>
-                <input
-                  type="range"
-                  min="0.08"
-                  max="0.6"
-                  step="0.01"
-                  value={devSettings.latchWindow}
-                  onChange={(event) => updateDevSetting("latchWindow", Number(event.target.value))}
-                />
-              </label>
-            )}
+            <label className="dev-control">
+              <span>
+                <b>Perfect Latch penceresi</b>
+                <output>{devSettings.perfectLatchWindow.toFixed(2)} sn</output>
+              </span>
+              <input
+                type="range"
+                min="0.08"
+                max="0.5"
+                step="0.01"
+                value={devSettings.perfectLatchWindow}
+                onChange={(event) =>
+                  updateDevSetting("perfectLatchWindow", Number(event.target.value))
+                }
+              />
+            </label>
 
             <label className="dev-control">
               <span>
@@ -1399,14 +1384,12 @@ export function OrbitRushGame() {
         {phase === "ready" && (
           <div className="game-overlay">
             <div className="overlay-content">
-              <p className="eyebrow">Tek dokunuş · Sonsuz koşu</p>
+              <p className="eyebrow">Basılı tut · Bırak · Sonsuz koşu</p>
               <h1 className="game-title">
                 ORBIT<span>RUSH</span>
               </h1>
               <p className="tagline">Yörüngeyi kır. Boşluğu yakala.</p>
-              <div className="input-prompt">
-                {devSettings.controlScheme === "hold" ? "Basılı tut / Space" : "Dokun / Space"}
-              </div>
+              <div className="input-prompt">Basılı tut / Space</div>
             </div>
           </div>
         )}

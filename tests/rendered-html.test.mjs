@@ -35,7 +35,7 @@ test("server-renders the Orbitrush game shell", async () => {
   assert.match(html, /<title>Orbitrush/i);
   assert.match(html, /ORBIT/);
   assert.match(html, /RUSH/);
-  assert.match(html, /Dokun \/ Space/i);
+  assert.match(html, /Basılı tut \/ Space/i);
   assert.match(html, /<canvas/i);
   assert.match(html, /Orbitrush oyun alanı/i);
   assert.match(html, /Developer Helper UI/i);
@@ -59,12 +59,15 @@ test("removes disposable starter UI and keeps local game persistence", async () 
   assert.match(game, /baseSpeed: 170/);
   assert.match(game, /comboSpeedGain: 0\.045/);
   assert.match(game, /lockTolerance: 11/);
-  assert.match(game, /controlScheme: "toggle"/);
-  assert.match(game, /latchWindow: 0\.25/);
+  assert.match(game, /perfectLatchWindow: 0\.25/);
   assert.match(game, /holdInputActive/);
+  assert.match(game, /latchAttemptCount/);
+  assert.match(game, /PERFECT LATCH/);
+  assert.match(game, /SAFE LATCH/);
   assert.match(game, /addEventListener\("keyup"/);
   assert.match(game, /UÇUŞ · SABİT/);
   assert.match(game, /\[18, 32, 46, 60\]/);
+  assert.doesNotMatch(game, /controlScheme|latchArmedTimer|Tap \/ Toggle/);
   assert.match(page, /<OrbitRushGame \/>/);
   assert.match(layout, /og\.png/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
