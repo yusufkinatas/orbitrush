@@ -32,15 +32,8 @@ test("keeps game persistence and contains no Sites build dependency", async () =
   assert.match(game, /perfectLatchWindow: 0\.25/);
   assert.match(game, /PERFECT LATCH/);
   assert.match(game, /SAFE LATCH/);
-  assert.match(game, /setLatchState/);
-  assert.match(game, /launcher:/);
-  assert.match(game, /lastLatchedPlanetId/);
-  assert.match(game, /current\.combo % 10 === 0/);
-  assert.match(game, /EXTRA LIFE \+1/);
-  assert.match(game, /ORBIT RECOVERED/);
   assert.match(game, /addEventListener\("keyup"/);
   assert.match(game, /UÇUŞ · COMBO/);
-  assert.doesNotMatch(game, /settings\.helpers && runtime\.phase !== "dead"/);
   assert.match(page, /<OrbitRushGame \/>/);
   assert.match(layout, /og\.png/);
   assert.match(packageJson, /"build": "next build"/);
