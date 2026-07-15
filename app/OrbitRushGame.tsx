@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useWebHaptics } from "web-haptics/react";
 
 const WIDTH = 390;
 const HEIGHT = 693.333;
@@ -316,16 +317,6 @@ function loadPlayerProfile(): PlayerProfile {
 
 function savePlayerProfile(profile: PlayerProfile) {
   return safeStorageSet(PROFILE_KEY, JSON.stringify(profile));
-}
-
-function haptic(pattern: number | number[]) {
-  try {
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-      navigator.vibrate(pattern);
-    }
-  } catch {
-    // Haptics are an optional enhancement and unsupported browsers simply skip them.
-  }
 }
 
 function getComboTier(combo: number) {
@@ -1749,6 +1740,7 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
 }
 
 export function OrbitRushGame() {
+  const { trigger: triggerHaptic } = useWebHaptics();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const runtimeRef = useRef<GameRuntime | null>(null);
   const audioRef = useRef<AudioEngine | null>(null);
@@ -1780,6 +1772,13 @@ export function OrbitRushGame() {
   const [showLaunchTutorial, setShowLaunchTutorial] = useState(false);
   const [showTutorialIntro, setShowTutorialIntro] = useState(false);
   const [summary, setSummary] = useState({ score: 0, best: 0, crystals: 0, reason: "" });
+
+  const haptic = useCallback(
+    (pattern: number | number[]) => {
+      void triggerHaptic(pattern);
+    },
+    [triggerHaptic],
+  );
 
   const closeShop = useCallback(() => {
     setShopOpen(false);
@@ -2418,7 +2417,7 @@ export function OrbitRushGame() {
       activeInputSourceRef.current = null;
       activeGamePointerRef.current = null;
     };
-  }, [restart]);
+  }, [haptic, restart]);
 
   useEffect(() => {
     if (runtimeRef.current) runtimeRef.current.devPaused = devOpen || shopOpen;
@@ -2516,7 +2515,7 @@ export function OrbitRushGame() {
       setShopOpen(true);
       haptic(7);
     },
-    [phase],
+    [haptic, phase],
   );
 
   const chooseSkin = useCallback((skinId: SkinId) => {
@@ -2544,7 +2543,7 @@ export function OrbitRushGame() {
       runtime.flash = 0.7;
     }
     haptic(owned ? 10 : [15, 20, 32]);
-  }, []);
+  }, [haptic]);
 
   const acknowledgeTutorialIntro = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -2553,7 +2552,7 @@ export function OrbitRushGame() {
     tutorialIntroOpenRef.current = false;
     setShowTutorialIntro(false);
     haptic(8);
-  }, []);
+  }, [haptic]);
 
   const onInputDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;

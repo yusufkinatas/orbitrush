@@ -66,7 +66,10 @@ test("keeps progression, cosmetics, and game persistence without a Sites depende
   assert.match(game, /YAKLAŞIRKEN BASILI TUT/);
   assert.match(game, /if \(tutorialIntroOpenRef\.current\)/);
   assert.match(game, /phase === "ready" && \(!showLaunchTutorial \|\| showTutorialIntro\)/);
-  assert.match(game, /navigator\.vibrate/);
+  assert.match(game, /import \{ useWebHaptics \} from "web-haptics\/react"/);
+  assert.match(game, /const \{ trigger: triggerHaptic \} = useWebHaptics\(\)/);
+  assert.match(game, /void triggerHaptic\(pattern\)/);
+  assert.doesNotMatch(game, /navigator\.vibrate/);
   assert.match(game, /SOLAR FLARE/);
   assert.match(game, /EVENT HORIZON/);
   assert.match(game, /crystalBalance/);
@@ -92,6 +95,7 @@ test("keeps progression, cosmetics, and game persistence without a Sites depende
   assert.match(page, /<OrbitRushGame \/>/);
   assert.match(layout, /og\.png/);
   assert.match(packageJson, /"build": "next build"/);
+  assert.match(packageJson, /"web-haptics": "\^0\.0\.6"/);
   assert.doesNotMatch(packageJson, /vinext|wrangler|cloudflare/i);
 
   await access(new URL("../.next/BUILD_ID", import.meta.url));
