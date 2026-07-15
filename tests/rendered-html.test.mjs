@@ -33,7 +33,7 @@ test("keeps game persistence and contains no Sites build dependency", async () =
   assert.match(game, /PERFECT LATCH/);
   assert.match(game, /SAFE LATCH/);
   assert.match(game, /addEventListener\("keyup"/);
-  assert.match(game, /UÇUŞ · SABİT/);
+  assert.match(game, /UÇUŞ · COMBO/);
   assert.match(page, /<OrbitRushGame \/>/);
   assert.match(layout, /og\.png/);
   assert.match(packageJson, /"build": "next build"/);

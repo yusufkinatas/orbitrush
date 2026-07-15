@@ -7,7 +7,7 @@ Orbitrush, dikey ekranda yukarı doğru ilerleyen sonsuz bir uzay koşusudur.
 - Oyuncu bir küredir ve gezegenlerin sabit yörünge çizgileri üzerinde döner.
 - Ekrana veya `Space` tuşuna basılı tutulduğunda latch aktif kalır; oyuncu geçerli yörünge bandına girince gezegene kilitlenir.
 - Tuş bırakıldığında oyuncu mevcut hareket yönüne teğet biçimde fırlar.
-- Uçuş hızı gezegenler arasında sabittir. Oyuncu bıraktığı gezegene, başka bir gezegene kilitlenmeden tekrar tutunamaz.
+- Kombo arttıkça hem yörüngedeki dönüş hızı hem de gezegenler arasındaki uçuş hızı artar. Oyuncu bıraktığı gezegene, başka bir gezegene kilitlenmeden tekrar tutunamaz.
 
 ## Perfect ve Safe Latch
 

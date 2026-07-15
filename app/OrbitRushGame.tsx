@@ -719,7 +719,7 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
   }
 
   if (runtime.settings.helpers && runtime.phase === "playing") {
-    const motionState = runtime.player.orbitPlanetId === null ? "UÇUŞ · SABİT" : "YÖRÜNGE";
+    const motionState = runtime.player.orbitPlanetId === null ? "UÇUŞ · COMBO" : "YÖRÜNGE";
     const latchState =
       runtime.holdInputActive && runtime.player.orbitPlanetId === null
         ? ` · LATCH ${runtime.latchHoldTime.toFixed(2)}s`
@@ -1038,13 +1038,14 @@ export function OrbitRushGame() {
           }
         }
 
+        const targetSpeed =
+          runtime.settings.baseSpeed *
+          (1 + Math.min(runtime.combo, 24) * runtime.settings.comboSpeedGain);
+        runtime.player.speed +=
+          (targetSpeed - runtime.player.speed) * (1 - Math.exp(-dt * 2.7));
+
         const planet = planetById(runtime, runtime.player.orbitPlanetId);
         if (planet) {
-          const targetSpeed =
-            runtime.settings.baseSpeed *
-            (1 + Math.min(runtime.combo, 24) * runtime.settings.comboSpeedGain);
-          runtime.player.speed +=
-            (targetSpeed - runtime.player.speed) * (1 - Math.exp(-dt * 2.7));
           runtime.player.angle +=
             (runtime.player.speed / planet.orbit) * runtime.player.direction * dt;
           runtime.player.x = planet.x + Math.cos(runtime.player.angle) * planet.orbit;
