@@ -34,6 +34,9 @@ test("keeps progression, cosmetics, and game persistence without a Sites depende
   assert.match(game, /orbitrush-player-profile-v1/);
   assert.match(game, /event\.code !== "Space"/);
   assert.match(game, /perfectLatchWindow: 0\.25/);
+  assert.match(game, /crystalComboTimeBonus: 0\.25/);
+  assert.match(game, /runtime\.comboTimer \+ runtime\.settings\.crystalComboTimeBonus/);
+  assert.match(game, /updateDevSetting\("crystalComboTimeBonus"/);
   assert.match(game, /PERFECT LATCH/);
   assert.match(game, /SAFE LATCH/);
   assert.match(game, /addEventListener\("keyup"/);
@@ -86,6 +89,7 @@ test("keeps progression, cosmetics, and game persistence without a Sites depende
   assert.match(mechanics, /ulaştığı her `x10` kombo katında bir ek can kazanır/i);
   assert.match(mechanics, /başarısızlık tonu/i);
   assert.match(mechanics, /Her gezegen yalnız ilk başarılı latch'inde skor ve kombo sonucu üretir/i);
+  assert.match(mechanics, /her kristal kombo sayacına varsayılan olarak `0,25` saniye ekler/i);
   assert.doesNotMatch(
     styles,
     /font-size:[^;]*(?<![\d.])(?:[0-9](?:\.\d+)?|1[0-3](?:\.\d+)?)px\b/,

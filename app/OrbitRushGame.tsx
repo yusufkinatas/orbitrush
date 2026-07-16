@@ -93,6 +93,7 @@ const DEFAULT_PROFILE: PlayerProfile = {
 
 type DevSettings = {
   comboDuration: number;
+  crystalComboTimeBonus: number;
   baseSpeed: number;
   comboSpeedGain: number;
   lockTolerance: number;
@@ -102,6 +103,7 @@ type DevSettings = {
 
 const DEFAULT_DEV_SETTINGS: DevSettings = {
   comboDuration: 4.8,
+  crystalComboTimeBonus: 0.25,
   baseSpeed: 170,
   comboSpeedGain: 0.045,
   lockTolerance: 11,
@@ -389,6 +391,7 @@ function loadDevSettings(): DevSettings {
     const parsed = JSON.parse(safeStorageGet("orbitrush-dev-settings", "{}")) as unknown;
     const stored = (parsed && typeof parsed === "object" ? parsed : {}) as Partial<DevSettings>;
     const comboDuration = Number(stored.comboDuration);
+    const crystalComboTimeBonus = Number(stored.crystalComboTimeBonus);
     const baseSpeed = Number(stored.baseSpeed);
     const comboSpeedGain = Number(stored.comboSpeedGain);
     const lockTolerance = Number(stored.lockTolerance);
@@ -398,6 +401,13 @@ function loadDevSettings(): DevSettings {
         Number.isFinite(comboDuration) ? comboDuration : DEFAULT_DEV_SETTINGS.comboDuration,
         2.5,
         8,
+      ),
+      crystalComboTimeBonus: clamp(
+        Number.isFinite(crystalComboTimeBonus)
+          ? crystalComboTimeBonus
+          : DEFAULT_DEV_SETTINGS.crystalComboTimeBonus,
+        0,
+        1,
       ),
       baseSpeed: clamp(
         Number.isFinite(baseSpeed) ? baseSpeed : DEFAULT_DEV_SETTINGS.baseSpeed,
@@ -2307,6 +2317,12 @@ export function OrbitRushGame() {
                 runtime.runCrystals += 1;
                 runtime.walletCrystals += 1;
                 runtime.score += Math.round(22 * Math.pow(Math.max(runtime.combo, 1), 1.22));
+                if (runtime.combo > 0) {
+                  runtime.comboTimer = Math.min(
+                    runtime.settings.comboDuration,
+                    runtime.comboTimer + runtime.settings.crystalComboTimeBonus,
+                  );
+                }
                 runtime.best = Math.max(runtime.best, runtime.score);
                 runtime.flash = Math.max(runtime.flash, 0.35);
                 const nextProfile: PlayerProfile = {
@@ -2713,6 +2729,23 @@ export function OrbitRushGame() {
                 step="0.1"
                 value={devSettings.comboDuration}
                 onChange={(event) => updateDevSetting("comboDuration", Number(event.target.value))}
+              />
+            </label>
+
+            <label className="dev-control">
+              <span>
+                <b>Kristal kombo bonusu</b>
+                <output>+{devSettings.crystalComboTimeBonus.toFixed(2)} sn</output>
+              </span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={devSettings.crystalComboTimeBonus}
+                onChange={(event) =>
+                  updateDevSetting("crystalComboTimeBonus", Number(event.target.value))
+                }
               />
             </label>
 

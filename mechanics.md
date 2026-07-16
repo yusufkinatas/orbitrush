@@ -53,6 +53,7 @@ Orbitrush, dikey ekranda yukarı doğru ilerleyen sonsuz bir uzay koşusudur.
 ## Kristaller ve görünümler
 
 - Gezegen yörüngelerindeki kristaller hem koşu skorunu artırır hem de toplandıkları anda kalıcı kristal cüzdanına eklenir.
+- Aktif bir kombo sırasında toplanan her kristal kombo sayacına varsayılan olarak `0,25` saniye ekler; kalan süre toplam kombo süresini aşamaz. Kristal toplamak tek başına kombo başlatmaz. Bu bonus geliştirici ayarlarından `0–1` saniye arasında değiştirilebilir.
 - Cüzdan, sahip olunan görünümler ve kuşanılmış görünüm `localStorage` içinde tek bir sürümlü oyuncu profili olarak saklanır.
 - Hazır ve ölüm ekranlarındaki **Görünümler** mağazasında beş kozmetik küre bulunur: ücretsiz `ION CORE`; ardından `SOLAR FLARE` (◆35), `VOID BLOOM` (◆90), `PRISM SHIFT` (◆220) ve `EVENT HORIZON` (◆500).
 - Görünümler çekirdek, korona, akresyon halkası ve iz efektlerini değiştirir; oyuncu yarıçapını, hitbox'ı veya oynanış gücünü değiştirmez.
