@@ -98,10 +98,10 @@ button {
   height: 44px;
   padding: 0;
   place-items: center;
-  border: 1px solid rgba(182, 219, 255, 0.18);
+  border: 1px solid rgba(255, 79, 200, 0.32);
   border-radius: 50%;
   background: rgba(4, 7, 20, 0.54);
-  color: rgba(236, 248, 255, 0.72);
+  color: rgba(255, 214, 240, 0.78);
   font-size: 1.125rem;
   cursor: pointer;
   backdrop-filter: blur(8px);
@@ -109,9 +109,10 @@ button {
 
 .sound-toggle:hover,
 .sound-toggle:focus-visible {
-  border-color: rgba(86, 243, 255, 0.55);
-  color: #fff;
+  border-color: rgba(255, 79, 200, 0.68);
+  color: var(--pink);
   outline: none;
+  box-shadow: 0 0 15px rgba(255, 79, 200, 0.18);
 }
 
 .shop-toggle {
@@ -124,17 +125,17 @@ button {
   padding: 8px 12px;
   align-content: center;
   gap: 1px;
-  border: 1px solid rgba(255, 214, 107, 0.28);
+  border: 1px solid rgba(255, 79, 200, 0.32);
   border-radius: 10px;
   background: rgba(7, 7, 21, 0.72);
-  color: rgba(238, 247, 255, 0.72);
+  color: rgba(255, 214, 240, 0.78);
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.875rem;
   font-weight: 750;
   letter-spacing: 0.08em;
   text-align: left;
   cursor: pointer;
-  box-shadow: 0 0 24px rgba(255, 190, 64, 0.08);
+  box-shadow: 0 0 24px rgba(255, 79, 200, 0.1);
   backdrop-filter: blur(10px);
 }
 
@@ -146,10 +147,10 @@ button {
 
 .shop-toggle:hover,
 .shop-toggle:focus-visible {
-  border-color: rgba(255, 214, 107, 0.62);
-  color: #fff;
+  border-color: rgba(255, 79, 200, 0.68);
+  color: var(--pink);
   outline: none;
-  box-shadow: 0 0 22px rgba(255, 190, 64, 0.16);
+  box-shadow: 0 0 22px rgba(255, 79, 200, 0.2);
 }
 
 .dev-toggle {
@@ -159,10 +160,10 @@ button {
   bottom: max(14px, env(safe-area-inset-bottom));
   min-height: 44px;
   padding: 0 10px;
-  border: 1px solid rgba(182, 219, 255, 0.18);
+  border: 1px solid rgba(255, 79, 200, 0.32);
   border-radius: 8px;
   background: rgba(4, 7, 20, 0.62);
-  color: rgba(226, 239, 255, 0.56);
+  color: rgba(255, 214, 240, 0.62);
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.875rem;
   font-weight: 750;
@@ -174,10 +175,10 @@ button {
 .dev-toggle:hover,
 .dev-toggle:focus-visible,
 .dev-toggle.is-active {
-  border-color: rgba(86, 243, 255, 0.62);
-  color: var(--cyan);
+  border-color: rgba(255, 79, 200, 0.68);
+  color: var(--pink);
   outline: none;
-  box-shadow: 0 0 15px rgba(86, 243, 255, 0.15);
+  box-shadow: 0 0 15px rgba(255, 79, 200, 0.18);
 }
 
 .dev-panel {
