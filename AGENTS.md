@@ -1,16 +1,16 @@
 # Orbitrush
 
-Orbitrush, mobil öncelikli ve dikey ekranda oynanan tek tuşlu bir neon uzay oyunudur. Oyuncu basılı tutarak bir gezegenin yörüngesine kilitlenir, bırakarak teğet yönde fırlar ve mümkün olduğunca uzun süre hayatta kalmaya çalışır.
+Orbitrush is a mobile-first, one-button neon space game played in portrait orientation. The player holds to latch onto a planet's orbit, releases to launch off tangentially, and tries to survive as long as possible.
 
-## Teknik yapı
+## Technical setup
 
-- Next.js, React ve TypeScript kullanır.
-- Vercel üzerinde yayınlanır.
-- Oyun Canvas üzerinde çalışır; ilerleme ve geliştirici ayarları `localStorage` içinde tutulur.
+- Uses Next.js, React, and TypeScript.
+- Deployed on Vercel.
+- The game runs on Canvas; progress and developer settings are stored in `localStorage`.
 
-## Çalışma ilkeleri
+## Working principles
 
-- Proof of concept sade, hızlı ve mobil odaklı kalmalı.
-- Temel oyun davranışları için [mechanics.md](./mechanics.md) kaynak alınmalı.
-- Core mekaniklerde değişiklik yapıldığında `mechanics.md` aynı değişiklik kapsamında güncellenmeli.
-- Değişikliklerden sonra `npm run lint` ve `npm test` çalıştırılmalı.
+- The proof of concept should stay simple, fast, and mobile-focused.
+- Use [mechanics.md](./mechanics.md) as the source of truth for core game behavior.
+- When core mechanics change, `mechanics.md` must be updated as part of the same change.
+- After making changes, run `npm run lint` and `npm test`.

@@ -40,7 +40,7 @@ const PLAYER_SKINS: PlayerSkin[] = [
   {
     id: "ion-core",
     name: "ION CORE",
-    description: "Saf cyan enerji çekirdeği",
+    description: "Pure cyan energy core",
     price: 0,
     primary: "#56f3ff",
     secondary: "#a96cff",
@@ -49,7 +49,7 @@ const PLAYER_SKINS: PlayerSkin[] = [
   {
     id: "solar-flare",
     name: "SOLAR FLARE",
-    description: "Kor parçacıklı yıldız alevi",
+    description: "Stellar flare with ember particles",
     price: 35,
     primary: "#ffb13b",
     secondary: "#ff4f6d",
@@ -58,7 +58,7 @@ const PLAYER_SKINS: PlayerSkin[] = [
   {
     id: "void-bloom",
     name: "VOID BLOOM",
-    description: "Fuşya akresyon halkalı boşluk",
+    description: "Void with a fuchsia accretion ring",
     price: 90,
     primary: "#ff4fc8",
     secondary: "#743cff",
@@ -67,7 +67,7 @@ const PLAYER_SKINS: PlayerSkin[] = [
   {
     id: "prism-shift",
     name: "PRISM SHIFT",
-    description: "Renk değiştiren kuantum kristali",
+    description: "Color-shifting quantum crystal",
     price: 220,
     primary: "#73f7ff",
     secondary: "#ff66db",
@@ -76,7 +76,7 @@ const PLAYER_SKINS: PlayerSkin[] = [
   {
     id: "event-horizon",
     name: "EVENT HORIZON",
-    description: "Foton halkalı mikro kara delik",
+    description: "Micro black hole with a photon ring",
     price: 500,
     primary: "#d9ffff",
     secondary: "#4d8dff",
@@ -112,7 +112,7 @@ const DEFAULT_DEV_SETTINGS: DevSettings = {
 };
 
 type Phase = "ready" | "playing" | "dead";
-type DeathReason = "ÇARPIŞMA" | "ASTEROİDE ÇARPTIN" | "BOŞLUĞA SAVRULDUN";
+type DeathReason = "COLLISION" | "HIT AN ASTEROID" | "LOST TO THE VOID";
 
 type Crystal = {
   angle: number;
@@ -894,7 +894,7 @@ function createRuntime(
     elapsed: 0,
     lastTime: performance.now(),
     tutorial,
-    reason: "BOŞLUĞA SAVRULDUN",
+    reason: "LOST TO THE VOID",
     settings: { ...settings },
     devPaused: false,
     holdInputActive: false,
@@ -1238,9 +1238,9 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
     context.font = "700 10px monospace";
     context.letterSpacing = "1.4px";
     context.fillStyle = "rgba(255,130,172,0.78)";
-    context.fillText("ASTEROİT KUŞAĞI", belt.safeX, sy - 11);
+    context.fillText("ASTEROID BELT", belt.safeX, sy - 11);
     context.fillStyle = "rgba(86,243,255,0.8)";
-    context.fillText("▽ GÜVENLİ KORİDOR", belt.safeX, sy + 10);
+    context.fillText("▽ SAFE CORRIDOR", belt.safeX, sy + 10);
     context.restore();
   }
 
@@ -1564,7 +1564,7 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
     context.font = "600 10px monospace";
     context.letterSpacing = "1.5px";
     context.fillStyle = "rgba(224,238,255,0.72)";
-    context.fillText("EN İYİ", 15, 17);
+    context.fillText("BEST", 15, 17);
     context.font = "700 15px monospace";
     context.fillStyle = "rgba(241,248,255,0.82)";
     context.fillText(String(runtime.best).padStart(6, "0"), 15, 29);
@@ -1572,7 +1572,7 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
     context.textAlign = "center";
     context.font = "600 10px monospace";
     context.fillStyle = "rgba(224,238,255,0.72)";
-    context.fillText("SKOR", WIDTH / 2, 17);
+    context.fillText("SCORE", WIDTH / 2, 17);
     context.font = "800 18px monospace";
     context.fillStyle = "#ffffff";
     context.shadowColor = "#56f3ff";
@@ -1591,7 +1591,7 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
   }
 
   if (runtime.settings.helpers && runtime.phase === "playing") {
-    const motionState = runtime.player.orbitPlanetId === null ? "UÇUŞ · COMBO" : "YÖRÜNGE";
+    const motionState = runtime.player.orbitPlanetId === null ? "FLIGHT · COMBO" : "ORBIT";
     const latchState =
       runtime.holdInputActive && runtime.player.orbitPlanetId === null
         ? ` · LATCH ${runtime.latchHoldTime.toFixed(2)}s`
@@ -1603,7 +1603,7 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
     context.letterSpacing = "0.9px";
     context.fillStyle = "rgba(143,248,255,0.8)";
     context.fillText(
-      `HIZ ${runtime.player.speed.toFixed(1)} · ${motionState}${latchState}`,
+      `SPEED ${runtime.player.speed.toFixed(1)} · ${motionState}${latchState}`,
       WIDTH / 2,
       53,
     );
@@ -1628,7 +1628,7 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
     context.fillStyle = perfect ? "#ffd66b" : spent ? "#b9bdd8" : "#8ff8ff";
     context.shadowColor = perfect ? "#ff4fc8" : spent ? "#73799b" : "#56f3ff";
     context.shadowBlur = perfect ? 20 : 10;
-    context.fillText(perfect ? "PERFECT LATCH" : spent ? "ENERJİ TÜKENDİ" : "SAFE LATCH", 0, 0);
+    context.fillText(perfect ? "PERFECT LATCH" : spent ? "OUT OF ENERGY" : "SAFE LATCH", 0, 0);
     context.font = "700 11px monospace";
     context.letterSpacing = "1.5px";
     context.fillStyle = perfect
@@ -1637,7 +1637,7 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
         ? "rgba(215,219,238,0.78)"
         : "rgba(190,245,255,0.8)";
     context.shadowBlur = 0;
-    context.fillText(perfect ? `COMBO x${runtime.combo}` : spent ? "COMBO YOK" : "COMBO RESET", 0, 18);
+    context.fillText(perfect ? `COMBO x${runtime.combo}` : spent ? "NO COMBO" : "COMBO RESET", 0, 18);
     context.restore();
   }
 
@@ -1717,8 +1717,8 @@ function drawGame(context: CanvasRenderingContext2D, runtime: GameRuntime) {
     context.shadowBlur = 12;
     context.fillText(
       runtime.milestoneLabel === "IGNITION"
-        ? "İYON ATEŞLEMESİ · İZ GÜÇLENDİ"
-        : "AKIŞ KIRILDI · ZAMAN YAVAŞLADI",
+        ? "ION IGNITION · TRAIL BOOSTED"
+        : "FLOW BROKEN · TIME SLOWED",
       0,
       23,
     );
@@ -2260,7 +2260,7 @@ export function OrbitRushGame() {
                 body.radius + PLAYER_RADIUS * 0.5,
               )
             ) {
-              die("ÇARPIŞMA");
+              die("COLLISION");
               break;
             }
           }
@@ -2279,7 +2279,7 @@ export function OrbitRushGame() {
                 asteroid.radius + PLAYER_RADIUS * 0.45,
               )
             ) {
-              die("ASTEROİDE ÇARPTIN");
+              die("HIT AN ASTEROID");
               break;
             }
           }
@@ -2300,7 +2300,7 @@ export function OrbitRushGame() {
             screenY < visibleTop - margin ||
             screenY > visibleBottom + margin
           ) {
-            die("BOŞLUĞA SAVRULDUN");
+            die("LOST TO THE VOID");
           }
         }
 
@@ -2627,7 +2627,7 @@ export function OrbitRushGame() {
   }, []);
 
   return (
-    <main className="orbitrush-shell" aria-label="Orbitrush oyunu">
+    <main className="orbitrush-shell" aria-label="Orbitrush game">
       <div
         className="game-frame"
         onPointerDown={onInputDown}
@@ -2637,13 +2637,13 @@ export function OrbitRushGame() {
         <canvas
           ref={canvasRef}
           className="game-canvas"
-          aria-label="Orbitrush oyun alanı. İlk basış launcher'dan fırlatır; basılı tutarak kilitlen, bırakarak yörüngeden çık."
+          aria-label="Orbitrush play area. The first tap launches from the launcher; hold to latch on, release to leave orbit."
         />
 
         <button
           type="button"
           className="sound-toggle"
-          aria-label={muted ? "Sesi aç" : "Sesi kapat"}
+          aria-label={muted ? "Unmute" : "Mute"}
           onClick={toggleSound}
         >
           {muted ? "×" : "♪"}
@@ -2664,18 +2664,18 @@ export function OrbitRushGame() {
             ref={shopTriggerRef}
             type="button"
             className="shop-toggle"
-            aria-label="Küre görünümlerini aç"
+            aria-label="Open orb skins"
             onClick={openShop}
           >
             <span>◆ {profile.crystalBalance}</span>
-            GÖRÜNÜMLER
+            SKINS
           </button>
         )}
 
         {devOpen && (
           <aside
             className="dev-panel"
-            aria-label="Developer Helper UI ayarları"
+            aria-label="Developer Helper UI settings"
             onPointerDown={(event) => event.stopPropagation()}
           >
             <div className="dev-panel-heading">
@@ -2683,7 +2683,7 @@ export function OrbitRushGame() {
                 <span>ORBITRUSH LAB</span>
                 <h2>Developer Helper UI</h2>
               </div>
-              <button type="button" aria-label="Developer menüsünü kapat" onClick={() => setDevOpen(false)}>
+              <button type="button" aria-label="Close developer menu" onClick={() => setDevOpen(false)}>
                 ×
               </button>
             </div>
@@ -2695,15 +2695,15 @@ export function OrbitRushGame() {
             >
               <span>
                 <b>Helper overlay</b>
-                Hitbox bandı + hız verisi
+                Hitbox band + speed data
               </span>
               <i>{devSettings.helpers ? "ON" : "OFF"}</i>
             </button>
 
             <label className="dev-control">
               <span>
-                <b>Perfect Latch penceresi</b>
-                <output>{devSettings.perfectLatchWindow.toFixed(2)} sn</output>
+                <b>Perfect Latch window</b>
+                <output>{devSettings.perfectLatchWindow.toFixed(2)} s</output>
               </span>
               <input
                 type="range"
@@ -2719,8 +2719,8 @@ export function OrbitRushGame() {
 
             <label className="dev-control">
               <span>
-                <b>Kombo süresi</b>
-                <output>{devSettings.comboDuration.toFixed(1)} sn</output>
+                <b>Combo duration</b>
+                <output>{devSettings.comboDuration.toFixed(1)} s</output>
               </span>
               <input
                 type="range"
@@ -2734,8 +2734,8 @@ export function OrbitRushGame() {
 
             <label className="dev-control">
               <span>
-                <b>Kristal kombo bonusu</b>
-                <output>+{devSettings.crystalComboTimeBonus.toFixed(2)} sn</output>
+                <b>Crystal combo bonus</b>
+                <output>+{devSettings.crystalComboTimeBonus.toFixed(2)} s</output>
               </span>
               <input
                 type="range"
@@ -2751,7 +2751,7 @@ export function OrbitRushGame() {
 
             <label className="dev-control">
               <span>
-                <b>Başlangıç hızı</b>
+                <b>Base speed</b>
                 <output>{Math.round(devSettings.baseSpeed)}</output>
               </span>
               <input
@@ -2766,8 +2766,8 @@ export function OrbitRushGame() {
 
             <label className="dev-control">
               <span>
-                <b>Kombo hız artışı</b>
-                <output>%{(devSettings.comboSpeedGain * 100).toFixed(1)} / kombo</output>
+                <b>Combo speed gain</b>
+                <output>{(devSettings.comboSpeedGain * 100).toFixed(1)}% / combo</output>
               </span>
               <input
                 type="range"
@@ -2795,7 +2795,7 @@ export function OrbitRushGame() {
             </label>
 
             <div className="dev-panel-footer">
-              <span>Menü açıkken oyun duraklar.</span>
+              <span>Game pauses while the menu is open.</span>
               <button type="button" onClick={resetDevSettings}>Reset to default</button>
             </div>
           </aside>
@@ -2812,26 +2812,26 @@ export function OrbitRushGame() {
               className="skin-shop"
               role="dialog"
               aria-modal="true"
-              aria-label="Küre görünümleri mağazası"
+              aria-label="Orb skins shop"
               tabIndex={-1}
             >
               <div className="shop-heading">
                 <div>
                   <span>ORBITRUSH VAULT</span>
-                  <h2>KÜRE GÖRÜNÜMLERİ</h2>
+                  <h2>ORB SKINS</h2>
                   <p>
                     {profilePersistent
-                      ? "Yalnızca kozmetik · hitbox değişmez"
-                      : "Depolama kapalı · seçimler bu oturum için"}
+                      ? "Cosmetic only · hitbox unchanged"
+                      : "Storage off · choices for this session"}
                   </p>
                 </div>
-                <div className="shop-balance" aria-label={`${profile.crystalBalance} kristal`}>
+                <div className="shop-balance" aria-label={`${profile.crystalBalance} crystals`}>
                   ◆ {profile.crystalBalance}
                 </div>
                 <button
                   type="button"
                   className="shop-close"
-                  aria-label="Görünüm mağazasını kapat"
+                  aria-label="Close skin shop"
                   onClick={closeShop}
                 >
                   ×
@@ -2863,12 +2863,12 @@ export function OrbitRushGame() {
                         onClick={() => chooseSkin(skin.id)}
                       >
                         {equipped
-                          ? "KUŞANILDI"
+                          ? "EQUIPPED"
                           : owned
-                            ? "KUŞAN"
+                            ? "EQUIP"
                             : affordable
-                              ? `SATIN AL · ◆${skin.price}`
-                              : `◆${skin.price} GEREKLİ`}
+                              ? `BUY · ◆${skin.price}`
+                              : `◆${skin.price} NEEDED`}
                       </button>
                     </article>
                   );
@@ -2893,11 +2893,11 @@ export function OrbitRushGame() {
               <span className="latch-demo-touch" />
             </div>
             <div className="latch-tutorial-copy">
-              <span>TEK KONTROL</span>
-              <strong id="latch-tutorial-title">BAS · FIRLAT · BASILI TUT</strong>
-              <p id="latch-tutorial-description">Yaklaşırken tut; yörüngedeyken bırak.</p>
+              <span>ONE CONTROL</span>
+              <strong id="latch-tutorial-title">TAP · LAUNCH · HOLD</strong>
+              <p id="latch-tutorial-description">Hold as you approach; release while in orbit.</p>
               <button type="button" onClick={acknowledgeTutorialIntro}>
-                ANLADIM
+                GOT IT
               </button>
             </div>
           </section>
@@ -2909,9 +2909,9 @@ export function OrbitRushGame() {
           !shopOpen &&
           !devOpen && (
             <section className="launch-tutorial" role="note" aria-live="polite">
-              <span>HAZIRSAN</span>
-              <strong>FIRLATMAK İÇİN DOKUN</strong>
-              <p>Açıyı launcher belirler.</p>
+              <span>WHEN READY</span>
+              <strong>TAP TO LAUNCH</strong>
+              <p>The launcher sets the angle.</p>
             </section>
           )}
 
@@ -2933,9 +2933,9 @@ export function OrbitRushGame() {
                 <span className="latch-demo-touch" />
               </div>
               <div className="latch-tutorial-copy">
-                <span>SIRADAKİ HAMLE</span>
-                <strong id="latch-tutorial-title">YAKLAŞIRKEN BASILI TUT</strong>
-                <p>Yörüngeye kilitlenince bırak.</p>
+                <span>NEXT MOVE</span>
+                <strong id="latch-tutorial-title">HOLD AS YOU APPROACH</strong>
+                <p>Release once you lock onto orbit.</p>
               </div>
             </section>
           )}
@@ -2943,13 +2943,13 @@ export function OrbitRushGame() {
         {phase === "ready" && (!showLaunchTutorial || showTutorialIntro) && (
           <div className="game-overlay">
             <div className={`overlay-content ${showTutorialIntro ? "has-latch-tutorial" : ""}`}>
-              <p className="eyebrow">Açıyı seç · Fırlat · Sonsuz koşu</p>
+              <p className="eyebrow">Aim · Launch · Endless run</p>
               <h1 className="game-title">
                 ORBIT<span>RUSH</span>
               </h1>
-              <p className="tagline">Yörüngeyi kır. Boşluğu yakala.</p>
+              <p className="tagline">Break orbit. Catch the void.</p>
               <div className="input-prompt">
-                Basılı tut / Space · Fırlat
+                Hold / Space · Launch
               </div>
             </div>
           </div>
@@ -2959,12 +2959,12 @@ export function OrbitRushGame() {
           <div className="game-overlay">
             <div className="overlay-content">
               <p className="eyebrow">{summary.reason}</p>
-              <h2 className="death-title">KOŞU BİTTİ</h2>
+              <h2 className="death-title">RUN OVER</h2>
               <p className="death-score">{String(summary.score).padStart(6, "0")}</p>
-              <p className="death-label">Skor</p>
-              <p className="best-label">En iyi · {String(summary.best).padStart(6, "0")}</p>
-              <p className="run-crystals">Bu koşu +◆{summary.crystals}</p>
-              <div className="input-prompt">Tekrar dene</div>
+              <p className="death-label">Score</p>
+              <p className="best-label">Best · {String(summary.best).padStart(6, "0")}</p>
+              <p className="run-crystals">This run +◆{summary.crystals}</p>
+              <div className="input-prompt">Try again</div>
             </div>
           </div>
         )}

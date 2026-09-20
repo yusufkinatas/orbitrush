@@ -1,65 +1,65 @@
-# Orbitrush Mekanikleri
+# Orbitrush Mechanics
 
-Orbitrush, dikey ekranda yukarı doğru ilerleyen sonsuz bir uzay koşusudur.
+Orbitrush is an endless space run that scrolls upward on a portrait screen.
 
-## Kontrol ve hareket
+## Control and movement
 
-- Oyuncu bir küredir ve gezegenlerin yörünge çizgileri üzerinde döner.
-- Her koşu, ekranın altındaki açısı yavaşça sağa-sola salınan bir launcher içinde başlar. İlk basış küreyi launcher'ın o an gösterdiği açıdan fırlatır; başlangıçta bir gezegenin çevresinde dönülmez.
-- Ekrana veya `Space` tuşuna basılı tutulduğunda latch aktif kalır; oyuncu geçerli yörünge bandına girince gezegene kilitlenir.
-- Tuş bırakıldığında oyuncu mevcut hareket yönüne teğet biçimde fırlar.
-- Kürenin gideceği teğet yön, launcher dahil her zaman dört kısa noktayla gösterilir. Gerçek latch tolerans bandı yalnız Developer Helper UI açıkken görünür.
-- Basılı tutarken çok hafif bir latch tonu duyulur; bir gezegene bağlanınca ton küçük biçimde değişir. Bağlı küre ile gezegenin merkezi arasında ince, kesikli bir enerji bağı çizilir.
-- İlk kez oynayan kullanıcıda kontrol özeti önce yalnız **Anladım** düğmesiyle kapatılan bir eğitim kartında gösterilir; kart açıkken oyun girdisi başlamaz. Onaydan sonra tam ekran katman olmadan launcher'ın üzerinde **Fırlatmak için dokun** ipucu, ilk fırlatmadan sonra da **Yaklaşırken basılı tut** ipucu gösterilir. İlk başarılı latch sonrasında eğitim tamamlanır ve kalıcı olarak gizlenir.
-- Kombo arttıkça hem yörüngedeki dönüş hızı hem de gezegenler arasındaki uçuş hızı artar. Oyuncu bıraktığı gezegene, başka bir gezegene kilitlenmeden tekrar tutunamaz.
-- Oyun ilerledikçe gezegenler küçülür, gezegen sıraları arasındaki mesafe koşunun ulaştığı en yüksek tempoya göre büyür ve kamera yumuşak biçimde geri çekilir. Böylece yüksek hızda da uçuş süresi ve rota okuma alanı korunur.
+- The player is an orb that spins along the orbit lines of planets.
+- Each run starts inside a launcher at the bottom of the screen whose angle slowly sweeps left and right. The first tap launches the orb at the angle the launcher is currently showing; you do not start out orbiting a planet.
+- Holding the screen or the `Space` key keeps latch active; the player locks onto a planet once it enters that planet's valid orbit band.
+- When the key is released, the player launches tangentially in its current direction of motion.
+- The orb's outgoing tangent direction is always shown with four short dots, including in the launcher. The actual latch tolerance band is only visible while the Developer Helper UI is open.
+- While holding, a very faint latch tone plays; when you attach to a planet the tone shifts slightly. A thin, dashed energy tether is drawn between the attached orb and the planet's center.
+- For a first-time player the control summary is shown first on a tutorial card dismissed only with the **Got it** button; game input does not start while the card is open. After acknowledging it, without a full-screen overlay, a **Tap to launch** hint appears above the launcher, and after the first launch a **Hold as you approach** hint appears. After the first successful latch the tutorial is completed and permanently hidden.
+- As the combo grows, both the orbital spin speed and the flight speed between planets increase. The player cannot re-attach to the planet it just left without first locking onto another planet.
+- As the run progresses, planets shrink, the distance between planet rows grows with the highest tempo the run has reached, and the camera smoothly pulls back. This preserves flight time and route-reading space even at high speed.
 
-## Gezegen türleri
+## Planet types
 
-Özel gezegenler ilk bölümde üretilmez; koşu ilerledikçe sırayla açılır ve giderek daha sık görülür.
+Special planets are not generated in the first section; they unlock in order as the run progresses and appear increasingly often.
 
-- **Hızlı gezegen:** Oyuncuyu normalden yaklaşık `%35` daha hızlı döndürür.
-- **Hareketli gezegen:** Önceden görülebilen kesikli bir hat üzerinde sağ-sol veya aşağı-yukarı salınır. Oyuncu yörüngedeyken gezegenle birlikte taşınır; bırakırken gezegenin hareketinden küçük bir momentum payı alır.
-- **Ters gezegen:** Kilitlenme anında doğal dönüş yönünü tersine çevirir.
-- **Kararsız gezegen:** Yörünge yarıçapı düzenli biçimde daralıp genişler; oyuncu ve kristaller aktif yörüngeyi takip eder.
-- **Kırılgan gezegen:** Yaklaşık dörtte üç tur dayanır. Süre dolunca parçalanır ve oyuncuyu mevcut teğet yönünde otomatik olarak fırlatır. Zorunlu fırlatma latch'i devreden çıkarır; tekrar kilitlenmek için oyuncunun bırakıp yeniden basması gerekir.
-- Özel gezegenler risklerine göre normal gezegenlerden daha yüksek latch skoru verir. Türleri merkezlerindeki sembol ve kendilerine özel renk/hareket ile önceden okunabilir.
+- **Fast planet:** Spins the player about `35%` faster than normal.
+- **Moving planet:** Swings left-right or up-down along a dashed, pre-visible track. While in orbit the player is carried along with the planet; on release it takes a small share of momentum from the planet's movement.
+- **Reverse planet:** Reverses the natural spin direction at the moment of locking on.
+- **Unstable planet:** Its orbit radius regularly contracts and expands; the player and crystals follow the active orbit.
+- **Fragile planet:** Holds for about three quarters of a turn. When time runs out it shatters and automatically launches the player in its current tangent direction. This forced launch disables latch; to lock on again the player must release and press once more.
+- Special planets give a higher latch score than normal planets according to their risk. Their types can be read in advance from the symbol at their center and their own color/movement.
 
-## Asteroit kuşağı
+## Asteroid belt
 
-- Asteroit kuşakları ilk gezegenlerde çıkmaz; oyuncu temel ritmi öğrendikten sonra gezegen sıraları arasında görünmeye başlar.
-- Her kuşak, önceki gezegen sırasından hedeflerden birine çizilen rotanın orta noktasında, ekranda gerçek genişliğiyle işaretlenen geniş bir güvenli koridorla üretilir.
-- Demo dengesi için kuşaklardaki asteroit sayısı ve boyutu düşüktür; çarpışma alanı da görünen şekilden bir miktar daha affedicidir. Böylece asteroitler rota kararı yaratır ancak doğru fırlatma açısını gereksiz yere kapatmaz.
-- Asteroitler kendi çevrelerinde döner fakat konumları sabittir; böylece rota zorlaşır ancak son anda rastgele kapanmaz.
-- Uçuş sırasında bir asteroide temas etmek koşuyu bitirir. Yüksek hızda asteroitlerin içinden atlanmaması için çarpışma, oyuncunun kareler arasındaki bütün hareket çizgisinde kontrol edilir.
+- Asteroid belts do not appear at the first planets; they start showing between planet rows after the player has learned the basic rhythm.
+- Each belt is generated at the midpoint of the route drawn from the previous planet row to one of the targets, with a wide safe corridor marked at its real on-screen width.
+- For demo balance the count and size of asteroids in belts are low, and the collision area is also a bit more forgiving than the visible shape. This way asteroids create a routing decision but do not needlessly block the correct launch angle.
+- Asteroids spin in place but their positions are fixed, so the route gets harder but does not randomly close off at the last moment.
+- Touching an asteroid during flight ends the run. So the player cannot skip through asteroids at high speed, the collision is checked along the entire movement line between frames.
 
-## Perfect ve Safe Latch
+## Perfect and Safe Latch
 
-- İlk latch denemesi yakalanmadan kısa süre önce yapılırsa **Perfect Latch** olur.
-- Çok erken basılı tutmak veya uçuş sırasında bırakıp tekrar basmak **Safe Latch** olur.
-- Perfect Latch komboyu artırır; Safe Latch güvenle kilitler fakat komboyu sıfırlar.
-- Her gezegen yalnız ilk başarılı latch'inde skor ve kombo sonucu üretir; ilk latch gezegenin kombo çekirdeğini tüketir. Tükenmiş bir gezegene yeniden tutunmak harekete izin verir fakat skor vermez, komboyu artırmaz, sıfırlamaz veya kombo süresini yenilemez. Aktif çekirdek gezegenin merkezindeki ışıklı, kesikli enerji mührüyle gösterilir ve ilk latch'te kaybolur.
-- Safe Latch, `x5` seviyesinin üstündeki aktif bir komboyu bozarsa normal kilit sesinin altına düşük seviyeli, aşağı inen kısa bir başarısızlık tonu eklenir.
+- If the first latch attempt is made shortly before being caught, it becomes a **Perfect Latch**.
+- Holding too early, or releasing and pressing again during flight, becomes a **Safe Latch**.
+- Perfect Latch increases the combo; Safe Latch locks on safely but resets the combo.
+- Each planet produces score and combo only on its first successful latch; the first latch consumes the planet's combo core. Re-attaching to a spent planet allows movement but gives no score, does not increase, reset, or refresh the combo timer. The active core is shown by a glowing, dashed energy seal at the planet's center and disappears on the first latch.
+- If a Safe Latch breaks an active combo above the `x5` level, a low, short, descending failure tone is added beneath the normal lock sound.
 
-## Kombo ve ödüller
+## Combo and rewards
 
-- Kombo süre bazlıdır; süre dolarsa kombo sıfırlanır ancak koşu bitmez.
-- Yüksek kombo hareket hızını, skoru, sesleri ve görsel efektleri güçlendirir.
-- Kombo eşikleri `x5 IGNITION`, `x10 OVERDRIVE` ve `x15 SUPERNOVA` olarak adlandırılır. Her eşik kürenin koronasını, iz uzunluğunu, parçacıklarını, ekran yıldızlarını ve ses katmanlarını güçlendirir.
-- `x10` ve üzerindeki her Perfect Latch kısa bir zaman yavaşlaması ve özel ses vuruşu üretir. `x10` ve `x15` eşiklerinde daha güçlü bir slow-motion kullanılır. Perfect zaman penceresi ve kombo sayacı gerçek zamanla ölçülmeye devam eder; slow-motion bu sayaçları uzatmaz.
-- Oyuncu koşuya bir canla başlar ve ulaştığı her `x10` kombo katında bir ek can kazanır. Ek canlar Safe Latch veya kombo süresinin dolmasıyla silinmez.
-- Destekleyen telefonlarda bırakma, Safe/Perfect Latch, eşikler, kristal toplama, kırılma ve ölüm için farklı titreşim desenleri çalınır. Haptik desteklenmiyorsa oyun sessizce normal çalışır.
+- The combo is time-based; if the timer runs out the combo resets, but the run does not end.
+- A high combo strengthens movement speed, score, sounds, and visual effects.
+- The combo thresholds are named `x5 IGNITION`, `x10 OVERDRIVE`, and `x15 SUPERNOVA`. Each threshold strengthens the orb's corona, trail length, particles, on-screen stars, and audio layers.
+- Every Perfect Latch at `x10` and above produces a short slow-down of time and a special audio hit. A stronger slow-motion is used at the `x10` and `x15` thresholds. The Perfect time window and combo timer keep being measured in real time; slow-motion does not extend these timers.
+- The player starts a run with one life and earns an extra life at each `x10` combo tier reached. Extra lives are not removed by a Safe Latch or by the combo timer running out.
+- On supporting phones, distinct vibration patterns play for release, Safe/Perfect Latch, thresholds, crystal pickup, shattering, and death. If haptics are not supported the game runs normally and silently.
 
-## Kristaller ve görünümler
+## Crystals and skins
 
-- Gezegen yörüngelerindeki kristaller hem koşu skorunu artırır hem de toplandıkları anda kalıcı kristal cüzdanına eklenir.
-- Aktif bir kombo sırasında toplanan her kristal kombo sayacına varsayılan olarak `0,25` saniye ekler; kalan süre toplam kombo süresini aşamaz. Kristal toplamak tek başına kombo başlatmaz. Bu bonus geliştirici ayarlarından `0–1` saniye arasında değiştirilebilir.
-- Cüzdan, sahip olunan görünümler ve kuşanılmış görünüm `localStorage` içinde tek bir sürümlü oyuncu profili olarak saklanır.
-- Hazır ve ölüm ekranlarındaki **Görünümler** mağazasında beş kozmetik küre bulunur: ücretsiz `ION CORE`; ardından `SOLAR FLARE` (◆35), `VOID BLOOM` (◆90), `PRISM SHIFT` (◆220) ve `EVENT HORIZON` (◆500).
-- Görünümler çekirdek, korona, akresyon halkası ve iz efektlerini değiştirir; oyuncu yarıçapını, hitbox'ı veya oynanış gücünü değiştirmez.
+- Crystals on planet orbits both increase the run score and are added to the permanent crystal wallet the moment they are collected.
+- Each crystal collected during an active combo adds `0.25` seconds to the combo timer by default; the remaining time cannot exceed the total combo duration. Collecting a crystal does not start a combo on its own. This bonus can be changed between `0-1` seconds in the developer settings.
+- The wallet, owned skins, and equipped skin are stored in `localStorage` as a single versioned player profile.
+- The **Skins** shop on the ready and death screens has five cosmetic orbs: the free `ION CORE`; then `SOLAR FLARE` (◆35), `VOID BLOOM` (◆90), `PRISM SHIFT` (◆220), and `EVENT HORIZON` (◆500).
+- Skins change the core, corona, accretion ring, and trail effects; they do not change the player radius, hitbox, or gameplay strength.
 
-## Başarısızlık ve dünya
+## Death and world
 
-- Bir gezegene ya da asteroide çarpmak veya geri çekilmiş kameranın görünür alanının dışına çıkmak ölüm tetikler.
-- Oyuncunun ek canı varsa bir can harcanır, kombo sıfırlanır ve küre otomatik olarak en son latch olduğu gezegenin yörüngesine geri yerleştirilir; skor ve o koşuda toplanan kristaller korunur. Son canla ölmek koşuyu bitirir.
-- Gezegenler kurallı biçimde rastgele üretilir ve çoğu durumda oyuncuya birden fazla rota sunar.
+- Hitting a planet or asteroid, or leaving the visible area of the pulled-back camera, triggers death.
+- If the player has an extra life, one life is spent, the combo resets, and the orb is automatically placed back into the orbit of the planet it last latched onto; the score and the crystals collected in that run are kept. Dying on the last life ends the run.
+- Planets are generated randomly within rules and in most cases offer the player more than one route.

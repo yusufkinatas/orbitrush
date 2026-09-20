@@ -5,14 +5,14 @@ import test from "node:test";
 test("native Next.js build emits the Orbitrush game shell", async () => {
   const html = await readFile(new URL("../.next/server/app/index.html", import.meta.url), "utf8");
 
-  assert.match(html, /<html lang="tr">/i);
+  assert.match(html, /<html lang="en">/i);
   assert.match(html, /<title>Orbitrush/i);
   assert.match(html, /ORBIT/);
   assert.match(html, /RUSH/);
-  assert.match(html, /Basılı tut \/ Space/i);
-  assert.match(html, /GÖRÜNÜMLER/);
+  assert.match(html, /Hold \/ Space/i);
+  assert.match(html, /SKINS/);
   assert.match(html, /<canvas/i);
-  assert.match(html, /Orbitrush oyun alanı/i);
+  assert.match(html, /Orbitrush play area/i);
   assert.match(html, /Developer Helper UI/i);
   assert.match(html, /og\.png/i);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
@@ -40,9 +40,9 @@ test("keeps progression, cosmetics, and game persistence without a Sites depende
   assert.match(game, /PERFECT LATCH/);
   assert.match(game, /SAFE LATCH/);
   assert.match(game, /addEventListener\("keyup"/);
-  assert.match(game, /UÇUŞ · COMBO/);
+  assert.match(game, /FLIGHT · COMBO/);
   assert.match(game, /type PlanetKind = "normal" \| "fast" \| "reverse" \| "unstable" \| "fragile" \| "moving"/);
-  assert.match(game, /ASTEROİT KUŞAĞI/);
+  assert.match(game, /ASTEROID BELT/);
   assert.match(game, /SLOW_MOTION_COMBO = 10/);
   assert.match(game, /launcher: \{ x: WIDTH \* 0\.5, y: 82, angle: Math\.PI \/ 2 \}/);
   assert.match(game, /runtime\.launcher\.angle = Math\.PI \/ 2 \+ Math\.sin/);
@@ -62,11 +62,11 @@ test("keeps progression, cosmetics, and game persistence without a Sites depende
   assert.match(game, /const awardsCombo = target\.comboAvailable/);
   assert.match(game, /target\.comboAvailable = false/);
   assert.match(game, /if \(awardsCombo\) current\.visitedPlanets \+= 1/);
-  assert.match(game, /ENERJİ TÜKENDİ/);
-  assert.match(game, /BAS · FIRLAT · BASILI TUT/);
-  assert.match(game, /ANLADIM/);
-  assert.match(game, /FIRLATMAK İÇİN DOKUN/);
-  assert.match(game, /YAKLAŞIRKEN BASILI TUT/);
+  assert.match(game, /OUT OF ENERGY/);
+  assert.match(game, /TAP · LAUNCH · HOLD/);
+  assert.match(game, /GOT IT/);
+  assert.match(game, /TAP TO LAUNCH/);
+  assert.match(game, /HOLD AS YOU APPROACH/);
   assert.match(game, /if \(tutorialIntroOpenRef\.current\)/);
   assert.match(game, /phase === "ready" && \(!showLaunchTutorial \|\| showTutorialIntro\)/);
   assert.match(game, /import \{ useWebHaptics \} from "web-haptics\/react"/);
@@ -81,15 +81,15 @@ test("keeps progression, cosmetics, and game persistence without a Sites depende
   assert.match(game, /corridorRadius/);
   assert.match(game, /const corridorRadius = late \? 72 : 82/);
   assert.match(game, /runtime\.holdInputActive = false/);
-  assert.match(mechanics, /## Gezegen türleri/);
-  assert.match(mechanics, /## Asteroit kuşağı/);
+  assert.match(mechanics, /## Planet types/);
+  assert.match(mechanics, /## Asteroid belt/);
   assert.match(mechanics, /x10 OVERDRIVE/);
-  assert.match(mechanics, /açısı yavaşça sağa-sola salınan bir launcher/i);
-  assert.match(mechanics, /yalnız \*\*Anladım\*\* düğmesiyle kapatılan bir eğitim kartında/i);
-  assert.match(mechanics, /ulaştığı her `x10` kombo katında bir ek can kazanır/i);
-  assert.match(mechanics, /başarısızlık tonu/i);
-  assert.match(mechanics, /Her gezegen yalnız ilk başarılı latch'inde skor ve kombo sonucu üretir/i);
-  assert.match(mechanics, /her kristal kombo sayacına varsayılan olarak `0,25` saniye ekler/i);
+  assert.match(mechanics, /whose angle slowly sweeps left and right/i);
+  assert.match(mechanics, /a tutorial card dismissed only with the \*\*Got it\*\* button/i);
+  assert.match(mechanics, /earns an extra life at each `x10` combo tier reached/i);
+  assert.match(mechanics, /failure tone/i);
+  assert.match(mechanics, /Each planet produces score and combo only on its first successful latch/i);
+  assert.match(mechanics, /adds `0\.25` seconds to the combo timer by default/i);
   assert.doesNotMatch(
     styles,
     /font-size:[^;]*(?<![\d.])(?:[0-9](?:\.\d+)?|1[0-3](?:\.\d+)?)px\b/,
